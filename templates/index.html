@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroVision AI - Analyse Médicale</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="d-flex" id="wrapper">
+    <!-- Sidebar -->
+    <div class="bg-light" id="sidebar-wrapper">
+        <div class="sidebar-heading">
+            <i class="fas fa-brain me-2"></i>NeuroVision
+            <div class="small text-muted mt-1">Analyse IA Médicale</div>
+        </div>
+        <div class="list-group list-group-flush">
+            <a href="#" class="list-group-item list-group-item-action bg-light p-3 active-sidebar">
+                <i class="fas fa-microscope me-2"></i>Analyse IRM
+            </a>
+            <a href="#" class="list-group-item list-group-item-action bg-light p-3">
+                <i class="fas fa-history me-2"></i>Historique
+            </a>
+            <a href="#" class="list-group-item list-group-item-action bg-light p-3">
+                <i class="fas fa-info-circle me-2"></i>À propos
+            </a>
+            <div class="p-3 mt-4">
+                <small class="text-muted text-uppercase">Système</small>
+                <div class="d-flex align-items-center mt-2">
+                    <div class="badge bg-success me-2" id="system-status">En ligne</div>
+                    <small>v2.0.0</small>
+                </div>
+                <div class="mt-2 small">
+                    <div id="model-status-clf">Classification: <span class="text-success">✓</span></div>
+                    <div id="model-status-seg">Segmentation: <span class="text-success">✓</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page Content -->
+    <div id="page-content-wrapper">
+        <nav class="navbar navbar-light bg-transparent border-bottom mb-4 no-print">
+            <div class="container-fluid">
+                <button class="btn btn-outline-secondary" id="menu-toggle">
+                    <i class="fas fa-bars"></i> Menu
+                </button>
+                <div class="navbar-text">
+                    <i class="fas fa-heartbeat text-danger me-1"></i>
+                    <span class="d-none d-md-inline">Système d'Analyse Médicale IA</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Report Header (Print only) -->
+        <div class="report-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-0">Rapport d'Analyse IA</h1>
+                    <p class="text-muted mb-0">NeuroVision - Système de Diagnostic Assisté</p>
+                </div>
+                <div class="text-end">
+                    <p class="mb-0"><strong>Date:</strong> <span id="report-date"></span></p>
+                    <p class="mb-0"><strong>ID Analyse:</strong> NV-<span id="report-id"></span></p>
+                </div>
+            </div>
+            <hr class="my-3">
+        </div>
+
+        <div class="container-fluid">
+            <!-- Upload Section -->
+            <div class="row upload-section" id="upload-section">
+                <div class="col-lg-8 mx-auto">
+                    <div class="text-center mb-5">
+                        <h1 class="display-5 fw-bold text-primary mb-3">
+                            <i class="fas fa-brain me-2"></i>NeuroVision AI
+                        </h1>
+                        <p class="lead text-muted mb-4">
+                            Système avancé d'analyse d'images IRM cérébrales
+                            utilisant l'intelligence artificielle pour la détection et segmentation de tumeurs
+                        </p>
+                    </div>
+                    
+                    <div class="upload-area" id="drop-zone" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-cloud-upload-alt fa-4x text-primary mb-3"></i>
+                        <h3>Glissez votre IRM cérébrale ici</h3>
+                        <p class="text-muted mb-4">ou cliquez pour sélectionner un fichier</p>
+                        <button class="btn btn-primary btn-lg px-4">
+                            <i class="fas fa-file-upload me-2"></i>Choisir une image
+                        </button>
+                        <p class="small text-muted mt-3">Formats acceptés: JPG, PNG, BMP (Max 10MB)</p>
+                        <input type="file" id="fileInput" hidden accept="image/*">
+                    </div>
+                    
+                    <div class="row mt-5">
+                        <div class="col-md-4">
+                            <div class="text-center p-3">
+                                <div class="bg-primary bg-opacity-10 p-3 rounded-circle d-inline-block mb-3">
+                                    <i class="fas fa-robot fa-2x text-primary"></i>
+                                </div>
+                                <h5>Classification IA</h5>
+                                <p class="small text-muted">Détection automatique du type de tumeur</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3">
+                                <div class="bg-danger bg-opacity-10 p-3 rounded-circle d-inline-block mb-3">
+                                    <i class="fas fa-bullseye fa-2x text-danger"></i>
+                                </div>
+                                <h5>Segmentation</h5>
+                                <p class="small text-muted">Délimitation précise de la région affectée</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center p-3">
+                                <div class="bg-success bg-opacity-10 p-3 rounded-circle d-inline-block mb-3">
+                                    <i class="fas fa-file-medical fa-2x text-success"></i>
+                                </div>
+                                <h5>Rapport Médical</h5>
+                                <p class="small text-muted">Génération de rapport imprimable</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loader -->
+            <div id="loader" class="text-center my-5" style="display: none;">
+                <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+                <h4 class="mt-4 text-primary">Analyse neurale en cours</h4>
+                <p class="text-muted">Notre IA examine l'image IRM...</p>
+                <div class="progress mt-3" style="height: 8px; max-width: 300px; margin: 0 auto;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         style="width: 100%"></div>
+                </div>
+            </div>
+
+            <!-- Results Area -->
+            <div id="results-area" style="display: none;">
+                <!-- Diagnostic Section -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="result-card">
+                            <h3 class="section-title">
+                                <i class="fas fa-diagnosis me-2"></i>1. Diagnostic Préliminaire
+                            </h3>
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-4">
+                                            <div class="diagnosis-icon bg-primary">
+                                                <i class="fas fa-stethoscope"></i>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h2 class="diagnosis-class mb-1" id="pred-class">Analyse en cours...</h2>
+                                            <p class="text-muted mb-0" id="diagnosis-description">
+                                                Classification par réseau de neurones convolutifs
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                                    <div class="confidence-display">
+                                        <span class="confidence-badge" id="pred-conf">0%</span>
+                                        <div class="small text-muted mt-1">Indice de confiance IA</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Confidence Bars -->
+                            <div class="mt-4">
+                                <h5 class="mb-3">Détail des probabilités:</h5>
+                                <div id="confidence-bars" class="confidence-bars-container">
+                                    <!-- Les barres seront ajoutées dynamiquement ici -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Images Section -->
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="result-card">
+                            <h5 class="image-title">
+                                <i class="fas fa-image me-2"></i>Image Originale
+                            </h5>
+                            <div class="image-container">
+                                <img id="img-original" class="result-image" 
+                                     src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f8f9fa'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='16' fill='%236c757d' text-anchor='middle'%3EImage IRM%3C/text%3E%3C/svg%3E" 
+                                     alt="IRM Originale">
+                            </div>
+                            <div class="image-info mt-3">
+                                <i class="fas fa-info-circle me-2 text-info"></i>
+                                <small>Image IRM cérébrale soumise pour analyse</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="result-card">
+                            <h5 class="image-title text-danger">
+                                <i class="fas fa-bullseye me-2"></i>Segmentation de la Tumeur
+                            </h5>
+                            <div class="image-container">
+                                <img id="img-segmentation" class="result-image" 
+                                     src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f8f9fa'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='16' fill='%236c757d' text-anchor='middle'%3ESegmentation%3C/text%3E%3C/svg%3E" 
+                                     alt="Segmentation">
+                            </div>
+                            
+                            <div class="segmentation-stats mt-3">
+                                <div class="row text-center g-3">
+                                    <div class="col-6">
+                                        <div class="stat-card bg-danger bg-opacity-10 p-3 rounded">
+                                            <h3 class="fw-bold text-danger mb-1" id="seg-percent">0%</h3>
+                                            <small class="text-muted">Surface Cérébrale Affectée</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="stat-card bg-dark bg-opacity-10 p-3 rounded">
+                                            <h3 class="fw-bold text-dark mb-1" id="seg-pixels">0</h3>
+                                            <small class="text-muted">Pixels Tumeur Détectés</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="alert alert-warning mt-3" role="alert" id="tumor-alert" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <span id="tumor-alert-text"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="text-center mb-5 no-print">
+                    <button class="btn btn-primary btn-lg me-3" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Imprimer le Rapport Médical
+                    </button>
+                    <button class="btn btn-outline-secondary btn-lg me-3" onclick="location.reload()">
+                        <i class="fas fa-redo me-2"></i>Nouvelle Analyse
+                    </button>
+                </div>
+
+                <!-- Medical Notes -->
+                <div class="row mt-4 no-print">
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-sticky-note me-2"></i>Notes Médicales:</h5>
+                            <ul class="mb-0">
+                                <li>Ce rapport est généré automatiquement par un système IA et doit être validé par un professionnel de santé.</li>
+                                <li>La précision du diagnostic dépend de la qualité de l'image IRM soumise.</li>
+                                <li>En cas d'urgence médicale, contactez immédiatement un médecin.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/script.js"></script>
+
+</body>
+</html>
