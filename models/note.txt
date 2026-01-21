@@ -1,1 +1,3 @@
-gfhf
+ce dossier contient deux models IA
+modele_tumeur_cerveau.h5 le modele pour la prediction de la classe
+segmentation.h5 le modele pour la segmentation de la tumeur
