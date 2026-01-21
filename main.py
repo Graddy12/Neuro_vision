@@ -243,7 +243,7 @@ async def predict(file: UploadFile = File(...)):
         
         # --- A. CLASSIFICATION ---
         img_clf = image.resize(TAILLE_CLASSIF)
-        arr_clf = keras.utils.img_to_array(img_clf) / 255.0
+        arr_clf = keras.utils.img_to_array(img_clf)
         arr_clf = np.expand_dims(arr_clf, axis=0)
         
         preds = model_clf.predict(arr_clf, verbose=0)[0]
