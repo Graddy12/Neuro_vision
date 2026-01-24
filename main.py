@@ -36,7 +36,7 @@ TAILLE_CLASSIF = (224, 224) # Taille pour le modèle de classification
 TAILLE_SEGMENT = (128, 128) # Taille pour le U-Net (Segmentation)
 
 # Noms des fichiers modèles
-MODEL_CLF_PATH = "models/modele.h5"
+MODEL_CLF_PATH = "models/modele_tumeur_cerveau.h5"
 MODEL_SEG_PATH = "models/segmentation.h5"
 
 NOMS_CLASSES = ['glioma', 'meningioma', 'notumor', 'pituitary']
