@@ -18,13 +18,13 @@
             <div class="small text-muted mt-1">Analyse IA Médicale</div>
         </div>
         <div class="list-group list-group-flush">
-            <a href="#" class="list-group-item list-group-item-action bg-light p-3 active-sidebar">
+            <a href="#" class="list-group-item list-group-item-action bg-light p-3 active-sidebar" id="nav-analyse">
                 <i class="fas fa-microscope me-2"></i>Analyse IRM
             </a>
-            <a href="#" class="list-group-item list-group-item-action bg-light p-3">
+            <a href="#" class="list-group-item list-group-item-action bg-light p-3" id="nav-historique">
                 <i class="fas fa-history me-2"></i>Historique
             </a>
-            <a href="#" class="list-group-item list-group-item-action bg-light p-3">
+            <a href="#" class="list-group-item list-group-item-action bg-light p-3" id="nav-apropos">
                 <i class="fas fa-info-circle me-2"></i>À propos
             </a>
             <div class="p-3 mt-4">
@@ -71,6 +71,74 @@
         </div>
 
         <div class="container-fluid">
+            <!-- Historique Section -->
+            <div id="historique-section" style="display: none;">
+                <div class="row">
+                    <div class="col-12">
+                        <h2 class="mb-4">
+                            <i class="fas fa-history me-2 text-primary"></i>Historique des Analyses
+                        </h2>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-info" id="history-count">0 analyses</span>
+                            </div>
+                            <button class="btn btn-sm btn-danger" id="clear-history-btn" style="display: none;">
+                                <i class="fas fa-trash me-2"></i>Vider l'historique
+                            </button>
+                        </div>
+                        
+                        <div id="history-container">
+                            <div class="alert alert-info text-center py-5">
+                                <i class="fas fa-inbox fa-3x mb-3 text-muted"></i>
+                                <p class="text-muted mb-0">Aucune analyse enregistrée pour le moment.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- À propos Section -->
+            <div id="apropos-section" style="display: none;">
+                <div class="row">
+                    <div class="col-lg-8 mx-auto">
+                        <h2 class="mb-4">
+                            <i class="fas fa-info-circle me-2 text-primary"></i>À propos de NeuroVision
+                        </h2>
+                        
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-brain me-2 text-primary"></i>Système d'Analyse IA</h5>
+                                <p class="card-text">NeuroVision est une application médicale utilisant l'intelligence artificielle pour l'analyse d'images IRM cérébrales.</p>
+                                <p class="mb-0"><strong>Version:</strong> 2.0.0</p>
+                            </div>
+                        </div>
+
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-cogs me-2 text-primary"></i>Fonctionnalités</h5>
+                                <ul class="mb-0">
+                                    <li><strong>Classification IA:</strong> Détecte le type de tumeur (Gliome, Méningiome, Hypophysaire)</li>
+                                    <li><strong>Segmentation:</strong> Localise et délimite la région affectée</li>
+                                    <li><strong>Historique:</strong> Conserve un historique complet de toutes les analyses</li>
+                                    <li><strong>Rapport Médical:</strong> Génère des rapports imprimables</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2 text-warning"></i>Avertissement Médical</h5>
+                                <p class="card-text">
+                                    Ce système est un outil d'assistance au diagnostic et ne remplace pas l'avis d'un professionnel de santé qualifié. 
+                                    Les résultats doivent toujours être validés par un médecin.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Upload Section -->
             <div class="row upload-section" id="upload-section">
                 <div class="col-lg-8 mx-auto">

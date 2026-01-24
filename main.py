@@ -15,6 +15,9 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 import json
+from datetime import datetime
+from pathlib import Path
+import uuid
 
 # Supprimer les avertissements TensorFlow standards
 tf.get_logger().setLevel('ERROR')
@@ -33,10 +36,13 @@ TAILLE_CLASSIF = (224, 224) # Taille pour le modèle de classification
 TAILLE_SEGMENT = (128, 128) # Taille pour le U-Net (Segmentation)
 
 # Noms des fichiers modèles
-MODEL_CLF_PATH = "models/modele_tumeur_cerveau.h5"
+MODEL_CLF_PATH = "models/modele.h5"
 MODEL_SEG_PATH = "models/segmentation.h5"
 
 NOMS_CLASSES = ['glioma', 'meningioma', 'notumor', 'pituitary']
+
+# Chemin du fichier historique
+HISTORY_FILE = "analyses_historique.json"
 
 # Créer le dossier models s'il n'existe pas
 os.makedirs("models", exist_ok=True)
@@ -108,6 +114,27 @@ def charger_modeles():
 
 # Charger au démarrage
 charger_modeles()
+
+# --- GESTION DE L'HISTORIQUE ---
+def charger_historique():
+    """Charge l'historique depuis le fichier JSON."""
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def sauvegarder_historique(historique):
+    """Sauvegarde l'historique dans le fichier JSON."""
+    try:
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(historique, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        print(f"Erreur lors de la sauvegarde de l'historique: {e}")
+        return False
 
 # --- FONCTIONS UTILITAIRES ---
 
@@ -243,7 +270,7 @@ async def predict(file: UploadFile = File(...)):
         
         # --- A. CLASSIFICATION ---
         img_clf = image.resize(TAILLE_CLASSIF)
-        arr_clf = keras.utils.img_to_array(img_clf) / 255.0
+        arr_clf = keras.utils.img_to_array(img_clf)
         arr_clf = np.expand_dims(arr_clf, axis=0)
         
         preds = model_clf.predict(arr_clf, verbose=0)[0]
@@ -273,6 +300,8 @@ async def predict(file: UploadFile = File(...)):
         # Créer le dictionnaire de réponse avec des types Python natifs
         response_data = {
             "success": True,
+            "id": str(uuid.uuid4()),
+            "timestamp": datetime.now().isoformat(),
             "classification": {
                 "class": classe_predite,
                 "confidence": confiance,
@@ -290,6 +319,11 @@ async def predict(file: UploadFile = File(...)):
         # Convertir tous les types numpy en types Python
         response_data = convert_to_python_types(response_data)
         
+        # Sauvegarder dans l'historique
+        historique = charger_historique()
+        historique.append(response_data)
+        sauvegarder_historique(historique)
+        
         return JSONResponse(content=response_data)
 
     except Exception as e:
@@ -302,6 +336,45 @@ async def predict(file: UploadFile = File(...)):
                 "message": "Erreur lors du traitement de l'image"
             }
         )
+
+@app.get("/api/history")
+async def get_history():
+    """Récupère l'historique complet des analyses."""
+    historique = charger_historique()
+    return JSONResponse(content={"analyses": historique})
+
+@app.get("/api/history/{analysis_id}")
+async def get_analysis(analysis_id: str):
+    """Récupère une analyse spécifique par son ID."""
+    historique = charger_historique()
+    for analyse in historique:
+        if analyse.get("id") == analysis_id:
+            return JSONResponse(content=analyse)
+    return JSONResponse(
+        status_code=404,
+        content={"error": "Analyse non trouvée"}
+    )
+
+@app.delete("/api/history/{analysis_id}")
+async def delete_analysis(analysis_id: str):
+    """Supprime une analyse de l'historique."""
+    historique = charger_historique()
+    historique_updated = [a for a in historique if a.get("id") != analysis_id]
+    
+    if len(historique) == len(historique_updated):
+        return JSONResponse(
+            status_code=404,
+            content={"error": "Analyse non trouvée"}
+        )
+    
+    sauvegarder_historique(historique_updated)
+    return JSONResponse(content={"success": True, "message": "Analyse supprimée"})
+
+@app.delete("/api/history")
+async def clear_history():
+    """Vide complètement l'historique."""
+    sauvegarder_historique([])
+    return JSONResponse(content={"success": True, "message": "Historique vidé"})
 
 if __name__ == "__main__":
     # Créer les dossiers nécessaires

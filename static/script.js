@@ -8,6 +8,192 @@ if (menuToggle) {
     };
 }
 
+// Navigation entre les sections
+const navAnalyse = document.getElementById("nav-analyse");
+const navHistorique = document.getElementById("nav-historique");
+const navApropos = document.getElementById("nav-apropos");
+
+const uploadSection = document.getElementById("upload-section");
+const resultsArea = document.getElementById("results-area");
+const historiqueSection = document.getElementById("historique-section");
+const aproposSection = document.getElementById("apropos-section");
+
+if (navAnalyse) {
+    navAnalyse.addEventListener("click", function(e) {
+        e.preventDefault();
+        showSection("analyse");
+        updateNavigation("nav-analyse");
+    });
+}
+
+if (navHistorique) {
+    navHistorique.addEventListener("click", function(e) {
+        e.preventDefault();
+        showSection("historique");
+        updateNavigation("nav-historique");
+        loadHistory();
+    });
+}
+
+if (navApropos) {
+    navApropos.addEventListener("click", function(e) {
+        e.preventDefault();
+        showSection("apropos");
+        updateNavigation("nav-apropos");
+    });
+}
+
+function showSection(section) {
+    if (uploadSection) uploadSection.style.display = 'none';
+    if (resultsArea) resultsArea.style.display = 'none';
+    if (historiqueSection) historiqueSection.style.display = 'none';
+    if (aproposSection) aproposSection.style.display = 'none';
+    
+    if (section === "analyse") {
+        if (uploadSection) uploadSection.style.display = 'block';
+    } else if (section === "historique") {
+        if (historiqueSection) historiqueSection.style.display = 'block';
+    } else if (section === "apropos") {
+        if (aproposSection) aproposSection.style.display = 'block';
+    }
+}
+
+function updateNavigation(activeId) {
+    document.querySelectorAll(".list-group-item").forEach(item => {
+        item.classList.remove("active-sidebar");
+    });
+    const active = document.getElementById(activeId);
+    if (active) active.classList.add("active-sidebar");
+}
+
+async function loadHistory() {
+    try {
+        const response = await fetch('/api/history');
+        const data = await response.json();
+        const analyses = data.analyses || [];
+        
+        const container = document.getElementById("history-container");
+        const countBadge = document.getElementById("history-count");
+        const clearBtn = document.getElementById("clear-history-btn");
+        
+        countBadge.textContent = analyses.length + " analyse" + (analyses.length > 1 ? "s" : "");
+        
+        if (analyses.length === 0) {
+            container.innerHTML = `
+                <div class="alert alert-info text-center py-5">
+                    <i class="fas fa-inbox fa-3x mb-3 text-muted"></i>
+                    <p class="text-muted mb-0">Aucune analyse enregistrée pour le moment.</p>
+                </div>
+            `;
+            if (clearBtn) clearBtn.style.display = 'none';
+        } else {
+            let html = '<div class="row g-4">';
+            
+            // Afficher en ordre inverse (plus récent d'abord)
+            for (let i = analyses.length - 1; i >= 0; i--) {
+                const analyse = analyses[i];
+                const date = new Date(analyse.timestamp);
+                const dateStr = date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'});
+                const className = formatClassLabel(analyse.classification.class);
+                const confidence = analyse.classification.confidence.toFixed(1);
+                const tumorPercent = analyse.segmentation.percentage.toFixed(2);
+                
+                html += `
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card h-100 history-card">
+                            <div class="card-header bg-light">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <small class="text-muted">${dateStr}</small>
+                                        <h6 class="card-title mb-0 mt-1">${className}</h6>
+                                    </div>
+                                    <span class="badge ${analyse.segmentation.tumor_detected ? 'bg-danger' : 'bg-success'}">
+                                        ${analyse.segmentation.tumor_detected ? 'Tumeur' : 'Normal'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <img src="${analyse.original_image}" class="img-fluid rounded mb-2" style="max-height: 200px; object-fit: cover;">
+                                </div>
+                                <div class="row g-2 text-center mb-3">
+                                    <div class="col-6">
+                                        <div class="bg-primary bg-opacity-10 p-2 rounded">
+                                            <small class="text-muted d-block">Confiance</small>
+                                            <strong class="text-primary">${confidence}%</strong>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="bg-danger bg-opacity-10 p-2 rounded">
+                                            <small class="text-muted d-block">Surface</small>
+                                            <strong class="text-danger">${tumorPercent}%</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-light">
+                                <button class="btn btn-sm btn-primary w-100 mb-2" onclick="viewAnalysis('${analyse.id}')">
+                                    <i class="fas fa-eye me-1"></i>Voir détails
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger w-100" onclick="deleteAnalysis('${analyse.id}')">
+                                    <i class="fas fa-trash me-1"></i>Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            container.innerHTML = html;
+            
+            if (clearBtn) {
+                clearBtn.style.display = 'block';
+                clearBtn.onclick = async function() {
+                    if (confirm("Êtes-vous sûr de vouloir vider complètement l'historique ?")) {
+                        await fetch('/api/history', {method: 'DELETE'});
+                        loadHistory();
+                    }
+                };
+            }
+        }
+    } catch (error) {
+        console.error("Erreur lors du chargement de l'historique:", error);
+        const container = document.getElementById("history-container");
+        if (container) {
+            container.innerHTML = '<div class="alert alert-danger">Erreur lors du chargement de l\'historique</div>';
+        }
+    }
+}
+
+async function viewAnalysis(analysisId) {
+    try {
+        const response = await fetch(`/api/history/${analysisId}`);
+        const data = await response.json();
+        
+        // Afficher les résultats comme si c'était une nouvelle analyse
+        displayResults(data);
+        showSection("analyse");
+        updateNavigation("nav-analyse");
+        
+    } catch (error) {
+        alert("Erreur lors du chargement des détails de l'analyse");
+    }
+}
+
+async function deleteAnalysis(analysisId) {
+    if (confirm("Êtes-vous sûr de vouloir supprimer cette analyse ?")) {
+        try {
+            const response = await fetch(`/api/history/${analysisId}`, {method: 'DELETE'});
+            if (response.ok) {
+                loadHistory();
+            }
+        } catch (error) {
+            alert("Erreur lors de la suppression");
+        }
+    }
+}
+
 // Vérifier l'état du serveur au chargement
 document.addEventListener('DOMContentLoaded', async function() {
     try {
