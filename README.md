@@ -83,7 +83,7 @@ git lfs pull
 Les fichiers attendus sont :
 
 * `models/modele_tumeur_cerveau.h5`
-* `models/Segmentation.h5`
+* `models/segmentation.h5`
 
 ---
 
