@@ -551,45 +551,66 @@ function setupDragAndDrop() {
     
     if (!dropZone || !fileInput) return;
 
-    const openFilePicker = function(e) {
+    const preventWindowFileOpen = function (e) {
+        e.preventDefault();
+    };
+    window.addEventListener('dragover', preventWindowFileOpen);
+    window.addEventListener('drop', preventWindowFileOpen);
+
+    const highlight = function (e) {
         e.preventDefault();
         e.stopPropagation();
-        fileInput.value = "";
-        fileInput.click();
-    };
-
-    dropZone.addEventListener('click', openFilePicker);
-    
-    dropZone.addEventListener('dragover', function(e) {
-        e.preventDefault();
+        if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = 'copy';
+        }
         dropZone.style.borderColor = '#3498db';
         dropZone.style.backgroundColor = '#f0f7ff';
-    });
+    };
+
+    dropZone.addEventListener('dragenter', highlight);
+    dropZone.addEventListener('dragover', highlight);
     
     dropZone.addEventListener('dragleave', function(e) {
         e.preventDefault();
+        if (e.relatedTarget && dropZone.contains(e.relatedTarget)) return;
         dropZone.style.borderColor = '#d1d9e6';
         dropZone.style.backgroundColor = 'white';
     });
     
     dropZone.addEventListener('drop', function(e) {
         e.preventDefault();
+        e.stopPropagation();
         dropZone.style.borderColor = '#d1d9e6';
         dropZone.style.backgroundColor = 'white';
-        
-        if (e.dataTransfer.files.length) {
-            handleFileSelect(e.dataTransfer.files[0]);
+        const files = e.dataTransfer && e.dataTransfer.files;
+        if (files && files.length) {
+            handleFileSelect(files[0]);
         }
     });
-    
+
+    dropZone.addEventListener('click', function (e) {
+        if (e.target.closest('label[for="fileInput"]') || e.target === fileInput) {
+            return;
+        }
+        if (typeof fileInput.showPicker === 'function') {
+            try {
+                fileInput.showPicker();
+                return;
+            } catch (err) {
+                /* Chrome exige un input visible : on retombe sur click() */
+            }
+        }
+        fileInput.click();
+    });
+
     fileInput.addEventListener('click', function(e) {
         e.stopPropagation();
     });
 
     fileInput.addEventListener('change', function() {
         const file = this.files && this.files[0];
-        this.value = "";
         if (file) handleFileSelect(file);
+        this.value = "";
     });
 }
 

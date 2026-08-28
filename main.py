@@ -17,7 +17,7 @@ import numpy as np
 import tensorflow as tf
 import uvicorn
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 from PIL import Image
@@ -578,6 +578,23 @@ async def clear_history():
         return JSONResponse(content={"success": True, "message": "Historique vidé"})
     except HistoryError as e:
         return JSONResponse(status_code=500, content={"error": str(e), "success": False})
+
+
+GITHUB_REPO_URL = "https://github.com/Graddy12/Neuro_vision"
+
+
+@app.get("/{full_path:path}")
+async def redirect_pasted_external_url(full_path: str):
+    """Chrome peut transformer un lien GitHub en chemin relatif : /https://github.com/..."""
+    normalized = full_path.strip().rstrip("/")
+    allowed = {
+        "https://github.com/Graddy12/Neuro_vision",
+        "https://github.com/Graddy12/Neuro_vision.git",
+        "http://github.com/Graddy12/Neuro_vision",
+    }
+    if normalized in allowed:
+        return RedirectResponse(GITHUB_REPO_URL, status_code=302)
+    raise HTTPException(status_code=404, detail="Page introuvable")
 
 if __name__ == "__main__":
     os.makedirs("templates", exist_ok=True)

@@ -19,13 +19,13 @@
             <div class="small text-muted mt-1">Analyse IA Médicale</div>
         </div>
         <div class="list-group list-group-flush">
-            <a href="#" class="list-group-item list-group-item-action bg-light p-3 active-sidebar" id="nav-analyse">
+            <a href="#analyse" class="list-group-item list-group-item-action bg-light p-3 active-sidebar" id="nav-analyse">
                 <i class="fas fa-microscope me-2"></i>Analyse IRM
             </a>
-            <a href="#" class="list-group-item list-group-item-action bg-light p-3" id="nav-historique">
+            <a href="#historique" class="list-group-item list-group-item-action bg-light p-3" id="nav-historique">
                 <i class="fas fa-history me-2"></i>Historique
             </a>
-            <a href="#" class="list-group-item list-group-item-action bg-light p-3" id="nav-apropos">
+            <a href="#apropos" class="list-group-item list-group-item-action bg-light p-3" id="nav-apropos">
                 <i class="fas fa-info-circle me-2"></i>À propos
             </a>
             <div class="p-3 mt-4">
@@ -277,7 +277,12 @@
                             <div class="result-card h-100">
                                 <h3 class="section-title"><i class="fas fa-user me-2"></i>Auteur</h3>
                                 <p class="mb-1"><strong>Grady Matangila</strong></p>
-                                <p class="text-muted mb-0">Projet IA — vision par ordinateur et santé. Outil éducatif et expérimental, conçu pour apprendre à lire une sortie de modèle, pas pour poser un diagnostic.</p>
+                                <p class="text-muted mb-2">Projet IA — vision par ordinateur et santé. Outil éducatif et expérimental, conçu pour apprendre à lire une sortie de modèle, pas pour poser un diagnostic.</p>
+                                <p class="mb-0">
+                                    <a href="https://github.com/Graddy12/Neuro_vision" target="_blank" rel="noopener noreferrer">
+                                        <i class="fab fa-github me-1"></i>github.com/Graddy12/Neuro_vision
+                                    </a>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -311,11 +316,11 @@
                         <i class="fas fa-cloud-upload-alt fa-4x text-primary mb-3"></i>
                         <h3>Glissez votre IRM cérébrale ici</h3>
                         <p class="text-muted mb-4">ou cliquez pour sélectionner un fichier</p>
-                        <button type="button" class="btn btn-primary btn-lg px-4" id="choose-file-btn">
+                        <label for="fileInput" class="btn btn-primary btn-lg px-4 mb-0" id="choose-file-btn">
                             <i class="fas fa-file-upload me-2"></i>Choisir une image
-                        </button>
+                        </label>
                         <p class="small text-muted mt-3">Formats acceptés: JPG, PNG, BMP (Max 10MB)</p>
-                        <input type="file" id="fileInput" hidden
+                        <input type="file" id="fileInput" class="file-input-visually-hidden"
                                accept=".jpg,.jpeg,.png,.bmp,image/jpeg,image/png,image/bmp">
                     </div>
                     
