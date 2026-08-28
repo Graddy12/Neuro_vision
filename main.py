@@ -59,7 +59,7 @@ TAILLE_SEGMENT = (128, 128) # Taille pour le U-Net (Segmentation)
 # Noms des fichiers modèles
 MODEL_CLF_PATH = "models/modele_tumeur_cerveau.h5"
 MODEL_SEG_PATH = "models/segmentation.h5"
-UI_VERSION = "2.2.0"
+UI_VERSION = "2.2.1"
 
 NOMS_CLASSES = ['glioma', 'meningioma', 'notumor', 'pituitary']
 
@@ -90,6 +90,36 @@ model_clf = None
 model_seg = None
 model_load_errors = {"classification": None, "segmentation": None}
 
+HDF5_MAGIC = b"\x89HDF\r\n\x1a\n"
+MIN_MODEL_BYTES = 1_000_000
+
+
+def inspect_model_file(path: str) -> dict:
+    """Vérifie qu'un .h5 est un vrai HDF5, pas un pointeur Git LFS ni un fichier vide."""
+    p = Path(path)
+    info = {"filename": p.name, "size_bytes": 0, "error": None}
+    if not p.is_file():
+        info["error"] = "Fichier modèle introuvable"
+        return info
+    info["size_bytes"] = p.stat().st_size
+    try:
+        head = p.read_bytes()[:120]
+    except OSError as e:
+        info["error"] = f"Impossible de lire le fichier : {e}"
+        return info
+    if head.startswith(b"version https://git-lfs.github.com/spec/v1"):
+        info["error"] = (
+            "Pointeur Git LFS uniquement : le vrai fichier .h5 n'a pas été téléchargé sur le serveur"
+        )
+        return info
+    if info["size_bytes"] < MIN_MODEL_BYTES or not head.startswith(HDF5_MAGIC):
+        info["error"] = (
+            f"Fichier invalide ({info['size_bytes']} octets) : ce n'est pas un modèle Keras HDF5 réel"
+        )
+        return info
+    return info
+
+
 def charger_modeles():
     global model_clf, model_seg, model_load_errors
     print("🔄 Chargement des modèles IA...")
@@ -100,20 +130,22 @@ def charger_modeles():
 
     # Un modèle absent ou illisible doit rendre le service indisponible.
     # Ne jamais remplacer silencieusement un modèle médical par un réseau aléatoire.
-    if not os.path.isfile(MODEL_CLF_PATH):
-        model_load_errors["classification"] = "Fichier modèle introuvable"
-        print(f"❌ {MODEL_CLF_PATH} introuvable.")
+    clf_info = inspect_model_file(MODEL_CLF_PATH)
+    if clf_info["error"]:
+        model_load_errors["classification"] = clf_info["error"]
+        print(f"❌ {MODEL_CLF_PATH}: {clf_info['error']}")
     else:
         try:
             model_clf = keras.models.load_model(MODEL_CLF_PATH, compile=False)
-            print("✅ Modèle Classification chargé.")
+            print(f"✅ Modèle Classification chargé ({clf_info['size_bytes']} octets).")
         except Exception as e:
             model_load_errors["classification"] = str(e)
             print(f"❌ Échec du chargement du modèle de classification : {e}")
 
-    if not os.path.isfile(MODEL_SEG_PATH):
-        model_load_errors["segmentation"] = "Fichier modèle introuvable"
-        print(f"❌ {MODEL_SEG_PATH} introuvable.")
+    seg_info = inspect_model_file(MODEL_SEG_PATH)
+    if seg_info["error"]:
+        model_load_errors["segmentation"] = seg_info["error"]
+        print(f"❌ {MODEL_SEG_PATH}: {seg_info['error']}")
     else:
         try:
             model_seg = keras.models.load_model(
@@ -121,7 +153,7 @@ def charger_modeles():
                 custom_objects={'dice_coef': dice_coef, 'iou_coef': iou_coef},
                 compile=False
             )
-            print("✅ Modèle Segmentation chargé.")
+            print(f"✅ Modèle Segmentation chargé ({seg_info['size_bytes']} octets).")
         except Exception as e:
             model_load_errors["segmentation"] = str(e)
             print(f"❌ Échec du chargement du modèle de segmentation : {e}")

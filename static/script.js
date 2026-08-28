@@ -1,6 +1,6 @@
 // Toggle Sidebar
 const scriptUrl = document.currentScript ? new URL(document.currentScript.src, window.location.href) : null;
-const CURRENT_UI_VERSION = scriptUrl ? (scriptUrl.searchParams.get("v") || "2.2.0") : "2.2.0";
+const CURRENT_UI_VERSION = scriptUrl ? (scriptUrl.searchParams.get("v") || "2.2.1") : "2.2.1";
 const PAGE_UI_VERSION = document.documentElement.dataset.uiVersion || "legacy";
 const wrapper = document.getElementById("wrapper");
 const menuToggle = document.getElementById("menu-toggle");
@@ -20,6 +20,13 @@ function setSrc(id, value) {
     const node = document.getElementById(id);
     if (node && value) node.src = value;
 }
+
+function isDisplayError(error) {
+    const msg = String((error && error.message) || "");
+    return /null|undefined|textContent|text content|innerHTML|Cannot set properties|Cannot read propert/i.test(msg);
+}
+
+function isMobileViewport() {
     return window.innerWidth <= 768;
 }
 
@@ -679,6 +686,13 @@ async function handleFileSelect(file) {
         }
     } catch (error) {
         console.error('Erreur lors de l\'analyse:', error);
+        if (isDisplayError(error)) {
+            showSection("historique");
+            updateNavigation("nav-historique");
+            loadHistory();
+            alert("L'analyse a été enregistrée, mais Chrome n'a pas pu afficher le rapport. Ouvrez-la depuis l'historique, ou rechargez la page avec Ctrl+Shift+R.");
+            return;
+        }
         showSection("analyse");
         const msg = (error && error.message) ? error.message : "Erreur inconnue";
         alert("Erreur d'analyse : " + msg);
