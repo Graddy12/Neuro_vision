@@ -1,9 +1,25 @@
 // Toggle Sidebar
+const scriptUrl = document.currentScript ? new URL(document.currentScript.src, window.location.href) : null;
+const CURRENT_UI_VERSION = scriptUrl ? (scriptUrl.searchParams.get("v") || "2.2.0") : "2.2.0";
+const PAGE_UI_VERSION = document.documentElement.dataset.uiVersion || "legacy";
 const wrapper = document.getElementById("wrapper");
 const menuToggle = document.getElementById("menu-toggle");
 const sidebarBackdrop = document.getElementById("sidebar-backdrop");
 
-function isMobileViewport() {
+function setText(id, value) {
+    const node = document.getElementById(id);
+    if (node) node.textContent = value == null ? "" : String(value);
+}
+
+function setHtml(id, value) {
+    const node = document.getElementById(id);
+    if (node) node.innerHTML = value == null ? "" : String(value);
+}
+
+function setSrc(id, value) {
+    const node = document.getElementById(id);
+    if (node && value) node.src = value;
+}
     return window.innerWidth <= 768;
 }
 
@@ -500,15 +516,18 @@ function refreshOutdatedInterface() {
         "seg-extent",
         "patient-id-input"
     ];
-    if (requiredIds.every((id) => document.getElementById(id))) {
+    const hasCurrentDom = requiredIds.every((id) => document.getElementById(id));
+    if (hasCurrentDom && PAGE_UI_VERSION === CURRENT_UI_VERSION) {
         return false;
     }
 
     const url = new URL(window.location.href);
-    if (url.searchParams.get("nv_ui") === "2") {
+    if (url.searchParams.get("nv_ui") === CURRENT_UI_VERSION) {
+        console.error("Interface NeuroVision obsolète malgré le rechargement forcé.");
         return false;
     }
-    url.searchParams.set("nv_ui", "2");
+    url.searchParams.set("nv_ui", CURRENT_UI_VERSION);
+    url.searchParams.set("cache_bust", Date.now().toString());
     window.location.replace(url.toString());
     return true;
 }
@@ -522,10 +541,10 @@ document.addEventListener('DOMContentLoaded', function() {
     setupHistoryListActions();
     setupResultActions();
 
-    fetch('/api/health')
+    fetch('/api/health', { cache: 'no-store' })
         .then(function(response) { return response.json(); })
         .then(function(data) {
-            if (data.status === 'ok') updateModelStatus(data);
+            updateModelStatus(data);
         })
         .catch(function() {
             console.log('Serveur en cours de démarrage...');
@@ -535,13 +554,22 @@ document.addEventListener('DOMContentLoaded', function() {
 function updateModelStatus(data) {
     const clfStatus = document.getElementById('model-status-clf');
     const segStatus = document.getElementById('model-status-seg');
+    const systemStatus = document.getElementById('system-status');
+    const clfLoaded = data.classification_loaded === true && data.fallback_models === false;
+    const segLoaded = data.segmentation_loaded === true && data.fallback_models === false;
+    const ready = clfLoaded && segLoaded;
     
     if (clfStatus) {
-        clfStatus.innerHTML = `Classification: <span class="${data.classification_loaded ? 'text-success' : 'text-warning'}">${data.classification_loaded ? '✓ Chargé' : '⚠ Mode démo'}</span>`;
+        clfStatus.innerHTML = `Classification: <span class="${clfLoaded ? 'text-success' : 'text-danger'}">${clfLoaded ? '✓ Modèle réel' : '✗ Indisponible'}</span>`;
     }
     
     if (segStatus) {
-        segStatus.innerHTML = `Segmentation: <span class="${data.segmentation_loaded ? 'text-success' : 'text-warning'}">${data.segmentation_loaded ? '✓ Chargé' : '⚠ Mode démo'}</span>`;
+        segStatus.innerHTML = `Segmentation: <span class="${segLoaded ? 'text-success' : 'text-danger'}">${segLoaded ? '✓ Modèle réel' : '✗ Indisponible'}</span>`;
+    }
+
+    if (systemStatus) {
+        systemStatus.textContent = ready ? 'En ligne' : 'Modèles indisponibles';
+        systemStatus.className = `badge ${ready ? 'bg-success' : 'bg-danger'} me-2`;
     }
 }
 
@@ -638,6 +666,10 @@ async function handleFileSelect(file) {
     try {
         const response = await fetch('/api/predict', {
             method: 'POST',
+            headers: {
+                'X-NeuroVision-UI-Version': PAGE_UI_VERSION
+            },
+            cache: 'no-store',
             body: formData
         });
 
@@ -648,7 +680,8 @@ async function handleFileSelect(file) {
     } catch (error) {
         console.error('Erreur lors de l\'analyse:', error);
         showSection("analyse");
-        alert(`Erreur d'analyse: ${error.message}`);
+        const msg = (error && error.message) ? error.message : "Erreur inconnue";
+        alert("Erreur d'analyse : " + msg);
         return;
     }
 
@@ -658,8 +691,10 @@ async function handleFileSelect(file) {
         updateNavigation("nav-analyse");
     } catch (error) {
         console.error('Analyse terminée, mais affichage impossible:', error);
-        showSection("analyse");
-        alert("L'analyse a été effectuée et enregistrée dans l'historique, mais son affichage a échoué. Rechargez la page, puis ouvrez-la depuis l'historique.");
+        showSection("historique");
+        updateNavigation("nav-historique");
+        loadHistory();
+        alert("L'analyse a bien été enregistrée, mais l'affichage du rapport a échoué. Ouvrez-la depuis l'historique.");
     }
 }
 
@@ -674,14 +709,14 @@ function displayResults(data, options = {}) {
     const resultsEl = document.getElementById("results-area");
     if (resultsEl) resultsEl.classList.add("fade-in");
 
-    const cls = data.classification;
-    const seg = data.segmentation;
-    const interpretation = interpretResults(data);
-    currentAnalysisId = data.id || null;
+    const cls = (data && data.classification) || {};
+    const seg = (data && data.segmentation) || {};
+    const interpretation = interpretResults(data || {});
+    currentAnalysisId = (data && data.id) || null;
 
-    document.getElementById("pred-class").textContent = formatClassLabel(cls.class);
-    document.getElementById("pred-conf").textContent = Number(cls.confidence).toFixed(1) + "%";
-    document.getElementById("pred-conf-label").textContent = interpretation.confidence.label;
+    setText("pred-class", formatClassLabel(cls.class));
+    setText("pred-conf", Number(cls.confidence || 0).toFixed(1) + "%");
+    setText("pred-conf-label", interpretation.confidence.label);
 
     const badge = document.getElementById("pred-conf");
     updateConfidenceBadge(badge, cls.confidence);
@@ -691,32 +726,38 @@ function displayResults(data, options = {}) {
     displayConfidenceBars(cls.details || []);
     renderInterpretation(interpretation);
 
-    document.getElementById("img-original").src = data.original_image;
-    if (seg && seg.image) {
-        document.getElementById("img-segmentation").src = seg.image;
+    setSrc("img-original", data && data.original_image);
+    if (seg.image) {
+        setSrc("img-segmentation", seg.image);
     }
 
     const caption = document.getElementById("original-image-caption");
     if (caption) {
-        caption.textContent = data.filename
+        caption.textContent = data && data.filename
             ? `Fichier analysé : ${data.filename}`
             : "Image IRM cérébrale soumise pour analyse";
     }
 
-    document.getElementById("seg-percent").textContent = Number(seg.percentage).toFixed(2) + "%";
-    document.getElementById("seg-extent").textContent = interpretation.extent.label;
+    setText("seg-percent", Number(seg.percentage || 0).toFixed(2) + "%");
+    setText("seg-extent", interpretation.extent.label);
 
     const tumorAlert = document.getElementById("tumor-alert");
     const tumorAlertText = document.getElementById("tumor-alert-text");
-    tumorAlert.style.display = "block";
-    tumorAlert.className = `alert ${interpretation.concordance.alertClass} mt-3`;
-    tumorAlertText.textContent = interpretation.concordance.short;
+    if (tumorAlert) {
+        tumorAlert.style.display = "block";
+        tumorAlert.className = `alert ${interpretation.concordance.alertClass} mt-3`;
+    }
+    if (tumorAlertText) {
+        tumorAlertText.textContent = interpretation.concordance.short;
+    }
 
-    const reportDate = data.timestamp ? new Date(data.timestamp) : new Date();
-    document.getElementById("report-date").textContent =
-        reportDate.toLocaleDateString("fr-FR") + " " + reportDate.toLocaleTimeString("fr-FR");
-    document.getElementById("report-id").textContent = formatAnalysisRef(data.id, data.short_id);
-    fillPatientField(data.patient_id || "");
+    const reportDate = data && data.timestamp ? new Date(data.timestamp) : new Date();
+    setText(
+        "report-date",
+        reportDate.toLocaleDateString("fr-FR") + " " + reportDate.toLocaleTimeString("fr-FR")
+    );
+    setText("report-id", formatAnalysisRef(data && data.id, data && data.short_id));
+    fillPatientField((data && data.patient_id) || "");
 }
 
 const TUMOR_PROFILES = {
@@ -1101,10 +1142,8 @@ function updateDiagnosisDescription(className) {
 }
 
 function updateConfidenceBadge(badge, confidence) {
-    // Réinitialiser les classes
+    if (!badge) return;
     badge.className = 'confidence-badge';
-    
-    // Ajouter la classe appropriée
     if (confidence > 90) {
         badge.style.background = 'linear-gradient(135deg, #27ae60 0%, #2ecc71 100%)';
     } else if (confidence > 70) {
@@ -1116,6 +1155,7 @@ function updateConfidenceBadge(badge, confidence) {
 
 function displayConfidenceBars(details) {
     const container = document.getElementById('confidence-bars');
+    if (!container) return;
     container.innerHTML = '';
     if (!details || !details.length) {
         return;

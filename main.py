@@ -16,7 +16,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
@@ -59,6 +59,7 @@ TAILLE_SEGMENT = (128, 128) # Taille pour le U-Net (Segmentation)
 # Noms des fichiers modèles
 MODEL_CLF_PATH = "models/modele_tumeur_cerveau.h5"
 MODEL_SEG_PATH = "models/segmentation.h5"
+UI_VERSION = "2.2.0"
 
 NOMS_CLASSES = ['glioma', 'meningioma', 'notumor', 'pituitary']
 
@@ -87,55 +88,43 @@ def iou_coef(y_true, y_pred, smooth=100):
 # --- CHARGEMENT DES MODÈLES ---
 model_clf = None
 model_seg = None
+model_load_errors = {"classification": None, "segmentation": None}
 
 def charger_modeles():
-    global model_clf, model_seg
+    global model_clf, model_seg, model_load_errors
     print("🔄 Chargement des modèles IA...")
-    
-    try:
-        # 1. Modèle de Classification
-        if os.path.exists(MODEL_CLF_PATH):
+
+    model_clf = None
+    model_seg = None
+    model_load_errors = {"classification": None, "segmentation": None}
+
+    # Un modèle absent ou illisible doit rendre le service indisponible.
+    # Ne jamais remplacer silencieusement un modèle médical par un réseau aléatoire.
+    if not os.path.isfile(MODEL_CLF_PATH):
+        model_load_errors["classification"] = "Fichier modèle introuvable"
+        print(f"❌ {MODEL_CLF_PATH} introuvable.")
+    else:
+        try:
             model_clf = keras.models.load_model(MODEL_CLF_PATH, compile=False)
             print("✅ Modèle Classification chargé.")
-        else:
-            print(f"⚠️ Avertissement: {MODEL_CLF_PATH} introuvable.")
-            print("📝 Création d'un modèle de classification factice pour le test...")
-            # Créer un modèle factice pour le développement
-            model_clf = keras.Sequential([
-                keras.layers.Input(shape=(224, 224, 3)),
-                keras.layers.Flatten(),
-                keras.layers.Dense(4, activation='softmax')
-            ])
+        except Exception as e:
+            model_load_errors["classification"] = str(e)
+            print(f"❌ Échec du chargement du modèle de classification : {e}")
 
-        # 2. Modèle de Segmentation
-        if os.path.exists(MODEL_SEG_PATH):
+    if not os.path.isfile(MODEL_SEG_PATH):
+        model_load_errors["segmentation"] = "Fichier modèle introuvable"
+        print(f"❌ {MODEL_SEG_PATH} introuvable.")
+    else:
+        try:
             model_seg = keras.models.load_model(
-                MODEL_SEG_PATH, 
+                MODEL_SEG_PATH,
                 custom_objects={'dice_coef': dice_coef, 'iou_coef': iou_coef},
                 compile=False
             )
             print("✅ Modèle Segmentation chargé.")
-        else:
-            print(f"⚠️ Avertissement: {MODEL_SEG_PATH} introuvable.")
-            print("📝 Création d'un modèle de segmentation factice pour le test...")
-            # Créer un modèle factice pour le développement
-            model_seg = keras.Sequential([
-                keras.layers.Input(shape=(128, 128, 3)),
-                keras.layers.Conv2D(1, (3, 3), activation='sigmoid', padding='same')
-            ])
-            
-    except Exception as e:
-        print(f"❌ Erreur critique lors du chargement : {e}")
-        # Créer des modèles factices en cas d'erreur
-        model_clf = keras.Sequential([
-            keras.layers.Input(shape=(224, 224, 3)),
-            keras.layers.Flatten(),
-            keras.layers.Dense(4, activation='softmax')
-        ])
-        model_seg = keras.Sequential([
-            keras.layers.Input(shape=(128, 128, 3)),
-            keras.layers.Conv2D(1, (3, 3), activation='sigmoid', padding='same')
-        ])
+        except Exception as e:
+            model_load_errors["segmentation"] = str(e)
+            print(f"❌ Échec du chargement du modèle de segmentation : {e}")
 
 # Charger au démarrage
 charger_modeles()
@@ -342,16 +331,20 @@ def convert_to_python_types(obj):
 # --- ROUTES API ---
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root():
+async def read_root(request: Request):
     """Sert la page HTML."""
     no_cache_headers = {
         "Cache-Control": "no-store, max-age=0",
         "Pragma": "no-cache",
         "Expires": "0",
+        "X-NeuroVision-UI-Version": UI_VERSION,
     }
+    if request.query_params.get("nv_ui") == UI_VERSION:
+        no_cache_headers["Clear-Site-Data"] = '"cache"'
     try:
         with open("templates/index.html", "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read(), headers=no_cache_headers)
+            html = f.read().replace("__NEUROVISION_UI_VERSION__", UI_VERSION)
+            return HTMLResponse(content=html, headers=no_cache_headers)
     except FileNotFoundError:
         # Si le fichier n'existe pas, renvoyer une page simple
         return HTMLResponse(content="""
@@ -369,13 +362,39 @@ async def read_root():
 
 @app.get("/api/health")
 async def health_check():
-    """Vérifie l'état du serveur."""
-    return {
-        "status": "ok",
+    """Vérifie que les deux vrais modèles Keras sont disponibles."""
+    classification_loaded = model_clf is not None
+    segmentation_loaded = model_seg is not None
+    ready = classification_loaded and segmentation_loaded
+    payload = {
+        "status": "ok" if ready else "degraded",
+        "ready": ready,
+        "ui_version": UI_VERSION,
         "classification_loaded": model_clf is not None,
         "segmentation_loaded": model_seg is not None,
-        "message": "NeuroVision API est opérationnelle"
+        "real_models": ready,
+        "fallback_models": False,
+        "models": {
+            "classification": {
+                "filename": Path(MODEL_CLF_PATH).name,
+                "size_bytes": Path(MODEL_CLF_PATH).stat().st_size if Path(MODEL_CLF_PATH).is_file() else 0,
+                "loaded": classification_loaded,
+                "error": model_load_errors["classification"],
+            },
+            "segmentation": {
+                "filename": Path(MODEL_SEG_PATH).name,
+                "size_bytes": Path(MODEL_SEG_PATH).stat().st_size if Path(MODEL_SEG_PATH).is_file() else 0,
+                "loaded": segmentation_loaded,
+                "error": model_load_errors["segmentation"],
+            },
+        },
+        "message": (
+            "NeuroVision utilise les deux modèles Keras réels"
+            if ready
+            else "Un ou plusieurs modèles Keras réels sont indisponibles"
+        ),
     }
+    return JSONResponse(status_code=200 if ready else 503, content=payload)
 
 def executer_pipeline(contents: bytes, filename: str):
     """Classification + segmentation + sauvegarde (exécuté hors boucle asyncio)."""
@@ -426,10 +445,13 @@ def executer_pipeline(contents: bytes, filename: str):
 async def predict(file: UploadFile = File(...)):
     """Pipeline complet : Classification + Segmentation."""
 
-    if model_clf is None:
+    if model_clf is None or model_seg is None:
         return JSONResponse(
-            status_code=500,
-            content={"error": "Modèles non chargés serveur."}
+            status_code=503,
+            content={
+                "success": False,
+                "error": "Les modèles IA réels ne sont pas disponibles sur le serveur.",
+            },
         )
 
     try:
