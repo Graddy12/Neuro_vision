@@ -3,24 +3,46 @@ import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
 import io
-import base64
-import numpy as np
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import backend as K
-import cv2
-from PIL import Image
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-import uvicorn
 import json
+import re
+import shutil
+import tempfile
+import threading
+import uuid
 from datetime import datetime
 from pathlib import Path
-import uuid
+
+import cv2
+import numpy as np
+import tensorflow as tf
+import uvicorn
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.concurrency import run_in_threadpool
+from PIL import Image
+from pydantic import BaseModel, Field
+from tensorflow import keras
+from tensorflow.keras import backend as K
 
 # Supprimer les avertissements TensorFlow standards
 tf.get_logger().setLevel('ERROR')
+
+class NoCacheStaticFiles(StaticFiles):
+    """En local, évite le 304 du navigateur qui bloque les mises à jour CSS/JS."""
+
+    def is_not_modified(self, response_headers, request_headers) -> bool:
+        return False
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        try:
+            response.headers["Cache-Control"] = "no-store, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+        except Exception:
+            pass
+        return response
+
 
 # --- CONFIGURATION ---
 app = FastAPI(
@@ -28,8 +50,7 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
 
 # Dimensions
 TAILLE_CLASSIF = (224, 224) # Taille pour le modèle de classification
@@ -41,11 +62,15 @@ MODEL_SEG_PATH = "models/segmentation.h5"
 
 NOMS_CLASSES = ['glioma', 'meningioma', 'notumor', 'pituitary']
 
-# Chemin du fichier historique
-HISTORY_FILE = "analyses_historique.json"
+DATA_DIR = Path("data")
+ANALYSES_DIR = DATA_DIR / "analyses"
+HISTORY_FILE = DATA_DIR / "history.json"
+DISPLAY_SIZE = (400, 400)
+_history_lock = threading.Lock()
 
-# Créer le dossier models s'il n'existe pas
 os.makedirs("models", exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+ANALYSES_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- MÉTRIQUES PERSONNALISÉES (Requises pour charger U-Net) ---
 def dice_coef(y_true, y_pred, smooth=100):
@@ -116,33 +141,127 @@ def charger_modeles():
 charger_modeles()
 
 # --- GESTION DE L'HISTORIQUE ---
+class HistoryError(Exception):
+    """Erreur de lecture ou d'écriture de l'historique."""
+
+
+def _safe_analysis_id(analysis_id: str) -> str:
+    try:
+        return str(uuid.UUID(analysis_id))
+    except (ValueError, AttributeError, TypeError):
+        raise HTTPException(status_code=400, detail="Identifiant d'analyse invalide")
+
+
+def _analysis_folder(analysis_id: str) -> Path:
+    return ANALYSES_DIR / _safe_analysis_id(analysis_id)
+
+
+def _safe_filename(name: str) -> str:
+    if not name:
+        return "image.png"
+    return Path(name).name[:120]
+
+
+def analysis_short_id(analysis_id: str) -> str:
+    """Référence courte et stable, dérivée de l'UUID (ex. NV-91DD1802)."""
+    raw = str(analysis_id or "").replace("-", "").upper()
+    code = raw[:8] if raw else "--------"
+    return f"NV-{code}"
+
+
+def sanitize_patient_id(value: str) -> str:
+    """Identifiant de dossier : lettres, chiffres, tirets, slash. Pas de nom libre."""
+    if not value:
+        return ""
+    cleaned = re.sub(r"\s+", "", str(value).strip())
+    cleaned = re.sub(r"[^A-Za-z0-9._/-]", "", cleaned)
+    return cleaned[:64]
+
+
 def charger_historique():
-    """Charge l'historique depuis le fichier JSON."""
-    if os.path.exists(HISTORY_FILE):
-        try:
-            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            return []
-    return []
+    """Charge l'historique depuis le fichier JSON (metadata uniquement)."""
+    if not HISTORY_FILE.exists():
+        return []
+    try:
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, list):
+            raise HistoryError("Fichier d'historique invalide (format inattendu).")
+        return data
+    except HistoryError:
+        raise
+    except json.JSONDecodeError as e:
+        raise HistoryError("Fichier d'historique corrompu. Impossible de le lire.") from e
+    except OSError as e:
+        raise HistoryError(f"Impossible de lire l'historique: {e}") from e
+
 
 def sauvegarder_historique(historique):
-    """Sauvegarde l'historique dans le fichier JSON."""
+    """Écriture atomique (fichier temporaire + rename) pour éviter un JSON à moitié écrit."""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=str(DATA_DIR), prefix="history_", suffix=".tmp")
     try:
-        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(historique, f, indent=2, ensure_ascii=False)
-        return True
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, HISTORY_FILE)
     except Exception as e:
-        print(f"Erreur lors de la sauvegarde de l'historique: {e}")
-        return False
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise HistoryError(f"Impossible d'enregistrer l'historique: {e}") from e
+
+
+def _with_image_urls(record: dict, include_details: bool = True) -> dict:
+    """Ajoute les URLs d'images sans les embarquer dans le JSON disque."""
+    analysis_id = record.get("id")
+    classification = dict(record.get("classification") or {})
+    if not include_details:
+        classification.pop("details", None)
+
+    segmentation = dict(record.get("segmentation") or {})
+    segmentation["image"] = f"/api/history/{analysis_id}/overlay"
+
+    return {
+        "success": True,
+        "id": analysis_id,
+        "short_id": analysis_short_id(analysis_id),
+        "timestamp": record.get("timestamp"),
+        "filename": record.get("filename"),
+        "patient_id": record.get("patient_id") or "",
+        "classification": classification,
+        "segmentation": segmentation,
+        "original_image": f"/api/history/{analysis_id}/original",
+    }
+
+
+def enregistrer_analyse(record: dict, original_img, overlay_img):
+    """Sauvegarde les PNG sur disque puis append la metadata dans history.json."""
+    analysis_id = record["id"]
+    folder = ANALYSES_DIR / analysis_id
+    folder.mkdir(parents=True, exist_ok=True)
+    try:
+        original_img.convert("RGB").resize(DISPLAY_SIZE).save(folder / "original.png", "PNG")
+        overlay_to_save = overlay_img if overlay_img is not None else original_img
+        overlay_to_save.convert("RGB").resize(DISPLAY_SIZE).save(folder / "overlay.png", "PNG")
+        with _history_lock:
+            historique = charger_historique()
+            historique.append(record)
+            sauvegarder_historique(historique)
+    except Exception:
+        shutil.rmtree(folder, ignore_errors=True)
+        raise
+
+
+def supprimer_dossier_analyse(analysis_id: str):
+    folder = ANALYSES_DIR / analysis_id
+    if folder.exists():
+        shutil.rmtree(folder, ignore_errors=True)
+
 
 # --- FONCTIONS UTILITAIRES ---
-
-def image_to_base64(image_pil):
-    """Convertit une image PIL en string base64 pour l'envoi JSON."""
-    buffered = io.BytesIO()
-    image_pil.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode()
 
 def traiter_segmentation(image_pil):
     """Effectue la segmentation et crée l'overlay."""
@@ -253,133 +372,213 @@ async def health_check():
         "message": "NeuroVision API est opérationnelle"
     }
 
+def executer_pipeline(contents: bytes, filename: str):
+    """Classification + segmentation + sauvegarde (exécuté hors boucle asyncio)."""
+    image = Image.open(io.BytesIO(contents)).convert("RGB")
+
+    img_clf = image.resize(TAILLE_CLASSIF)
+    arr_clf = keras.utils.img_to_array(img_clf)
+    arr_clf = np.expand_dims(arr_clf, axis=0)
+
+    preds = model_clf.predict(arr_clf, verbose=0)[0]
+    idx_max = int(np.argmax(preds))
+    classe_predite = NOMS_CLASSES[idx_max]
+    confiance = float(preds[idx_max] * 100)
+
+    details = []
+    for i, nom in enumerate(NOMS_CLASSES):
+        details.append({
+            "label": nom,
+            "probability": float(preds[i] * 100)
+        })
+    details.sort(key=lambda x: x["probability"], reverse=True)
+
+    overlay_img, pixels, percent = traiter_segmentation(image)
+    percent_python = float(percent)
+    analysis_id = str(uuid.uuid4())
+
+    record = convert_to_python_types({
+        "id": analysis_id,
+        "timestamp": datetime.now().isoformat(),
+        "filename": _safe_filename(filename),
+        "patient_id": "",
+        "classification": {
+            "class": classe_predite,
+            "confidence": confiance,
+            "details": details
+        },
+        "segmentation": {
+            "tumor_detected": bool(percent_python > 0.1),
+            "pixels": int(pixels),
+            "percentage": float(round(percent_python, 2))
+        }
+    })
+    enregistrer_analyse(record, image, overlay_img)
+    return _with_image_urls(record, include_details=True)
+
+
 @app.post("/api/predict")
 async def predict(file: UploadFile = File(...)):
     """Pipeline complet : Classification + Segmentation."""
-    
+
     if model_clf is None:
         return JSONResponse(
-            status_code=500, 
+            status_code=500,
             content={"error": "Modèles non chargés serveur."}
         )
 
     try:
-        # Lire l'image
         contents = await file.read()
-        image = Image.open(io.BytesIO(contents)).convert("RGB")
-        
-        # --- A. CLASSIFICATION ---
-        img_clf = image.resize(TAILLE_CLASSIF)
-        arr_clf = keras.utils.img_to_array(img_clf)
-        arr_clf = np.expand_dims(arr_clf, axis=0)
-        
-        preds = model_clf.predict(arr_clf, verbose=0)[0]
-        idx_max = int(np.argmax(preds))  # Convertir en int Python
-        classe_predite = NOMS_CLASSES[idx_max]
-        confiance = float(preds[idx_max] * 100)  # Déjà float
-        
-        # Détails pour les barres de progression
-        details = []
-        for i, nom in enumerate(NOMS_CLASSES):
-            details.append({
-                "label": nom,
-                "probability": float(preds[i] * 100)  # Convertir en float Python
-            })
-        details.sort(key=lambda x: x["probability"], reverse=True)
-
-        # --- B. SEGMENTATION ---
-        overlay_img, pixels, percent = traiter_segmentation(image)
-        
-        # Convertir percent en float Python (déjà fait dans traiter_segmentation)
-        percent_python = float(percent)
-        
-        # Encodage des images pour le JSON
-        original_b64 = image_to_base64(image.resize((400, 400)))
-        overlay_b64 = image_to_base64(overlay_img.resize((400, 400))) if overlay_img else None
-
-        # Créer le dictionnaire de réponse avec des types Python natifs
-        response_data = {
-            "success": True,
-            "id": str(uuid.uuid4()),
-            "timestamp": datetime.now().isoformat(),
-            "classification": {
-                "class": classe_predite,
-                "confidence": confiance,
-                "details": details
-            },
-            "segmentation": {
-                "tumor_detected": bool(percent_python > 0.1),  # Convertir en bool Python
-                "pixels": int(pixels),  # Convertir en int Python
-                "percentage": float(round(percent_python, 2)),  # Convertir en float Python
-                "image": f"data:image/png;base64,{overlay_b64}" if overlay_b64 else None
-            },
-            "original_image": f"data:image/png;base64,{original_b64}"
-        }
-        
-        # Convertir tous les types numpy en types Python
-        response_data = convert_to_python_types(response_data)
-        
-        # Sauvegarder dans l'historique
-        historique = charger_historique()
-        historique.append(response_data)
-        sauvegarder_historique(historique)
-        
-        return JSONResponse(content=response_data)
-
+        payload = await run_in_threadpool(executer_pipeline, contents, file.filename)
+        return JSONResponse(content=payload)
+    except HistoryError as e:
+        print(f"Erreur historique: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": str(e),
+                "success": False,
+                "message": "L'analyse a réussi mais n'a pas pu être enregistrée dans l'historique."
+            }
+        )
     except Exception as e:
         print(f"Erreur serveur: {str(e)}")
         return JSONResponse(
-            status_code=500, 
+            status_code=500,
             content={
-                "error": str(e), 
+                "error": str(e),
                 "success": False,
                 "message": "Erreur lors du traitement de l'image"
             }
         )
 
+
 @app.get("/api/history")
 async def get_history():
-    """Récupère l'historique complet des analyses."""
-    historique = charger_historique()
-    return JSONResponse(content={"analyses": historique})
+    """Liste les analyses (metadata + URLs, sans images embarquées), plus récent d'abord."""
+    try:
+        with _history_lock:
+            historique = charger_historique()
+        analyses = [
+            _with_image_urls(item, include_details=False)
+            for item in reversed(historique)
+        ]
+        return JSONResponse(content={"analyses": analyses})
+    except HistoryError as e:
+        print(f"Erreur historique: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e), "analyses": []}
+        )
+
+
+@app.get("/api/history/{analysis_id}/original")
+async def get_history_original(analysis_id: str):
+    path = _analysis_folder(analysis_id) / "original.png"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Image originale introuvable")
+    return FileResponse(path, media_type="image/png")
+
+
+@app.get("/api/history/{analysis_id}/overlay")
+async def get_history_overlay(analysis_id: str):
+    path = _analysis_folder(analysis_id) / "overlay.png"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Image de segmentation introuvable")
+    return FileResponse(path, media_type="image/png")
+
 
 @app.get("/api/history/{analysis_id}")
 async def get_analysis(analysis_id: str):
-    """Récupère une analyse spécifique par son ID."""
-    historique = charger_historique()
+    """Récupère une analyse spécifique (metadata + URLs d'images)."""
+    analysis_id = _safe_analysis_id(analysis_id)
+    try:
+        with _history_lock:
+            historique = charger_historique()
+    except HistoryError as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
     for analyse in historique:
         if analyse.get("id") == analysis_id:
-            return JSONResponse(content=analyse)
+            return JSONResponse(content=_with_image_urls(analyse, include_details=True))
     return JSONResponse(
         status_code=404,
         content={"error": "Analyse non trouvée"}
     )
 
+
+class PatientIdPayload(BaseModel):
+    patient_id: str = Field(default="", max_length=80)
+
+
+@app.patch("/api/history/{analysis_id}/patient")
+async def update_patient_id(analysis_id: str, payload: PatientIdPayload):
+    """Associe (ou met à jour) l'identifiant de dossier patient d'une analyse."""
+    analysis_id = _safe_analysis_id(analysis_id)
+    patient_id = sanitize_patient_id(payload.patient_id)
+    try:
+        with _history_lock:
+            historique = charger_historique()
+            found = False
+            for analyse in historique:
+                if analyse.get("id") == analysis_id:
+                    analyse["patient_id"] = patient_id
+                    found = True
+                    break
+            if not found:
+                return JSONResponse(
+                    status_code=404,
+                    content={"error": "Analyse non trouvée", "success": False}
+                )
+            sauvegarder_historique(historique)
+        return JSONResponse(content={
+            "success": True,
+            "id": analysis_id,
+            "patient_id": patient_id,
+            "message": "Dossier patient enregistré" if patient_id else "Dossier patient retiré"
+        })
+    except HistoryError as e:
+        return JSONResponse(status_code=500, content={"error": str(e), "success": False})
+
+
 @app.delete("/api/history/{analysis_id}")
 async def delete_analysis(analysis_id: str):
-    """Supprime une analyse de l'historique."""
-    historique = charger_historique()
-    historique_updated = [a for a in historique if a.get("id") != analysis_id]
-    
-    if len(historique) == len(historique_updated):
-        return JSONResponse(
-            status_code=404,
-            content={"error": "Analyse non trouvée"}
-        )
-    
-    sauvegarder_historique(historique_updated)
-    return JSONResponse(content={"success": True, "message": "Analyse supprimée"})
+    """Supprime une analyse et ses images."""
+    analysis_id = _safe_analysis_id(analysis_id)
+    try:
+        with _history_lock:
+            historique = charger_historique()
+            historique_updated = [a for a in historique if a.get("id") != analysis_id]
+            if len(historique) == len(historique_updated):
+                return JSONResponse(
+                    status_code=404,
+                    content={"error": "Analyse non trouvée"}
+                )
+            sauvegarder_historique(historique_updated)
+        supprimer_dossier_analyse(analysis_id)
+        return JSONResponse(content={"success": True, "message": "Analyse supprimée"})
+    except HistoryError as e:
+        return JSONResponse(status_code=500, content={"error": str(e), "success": False})
+
 
 @app.delete("/api/history")
 async def clear_history():
-    """Vide complètement l'historique."""
-    sauvegarder_historique([])
-    return JSONResponse(content={"success": True, "message": "Historique vidé"})
+    """Vide complètement l'historique et supprime les images associées."""
+    try:
+        with _history_lock:
+            sauvegarder_historique([])
+        if ANALYSES_DIR.exists():
+            shutil.rmtree(ANALYSES_DIR, ignore_errors=True)
+        ANALYSES_DIR.mkdir(parents=True, exist_ok=True)
+        return JSONResponse(content={"success": True, "message": "Historique vidé"})
+    except HistoryError as e:
+        return JSONResponse(status_code=500, content={"error": str(e), "success": False})
 
 if __name__ == "__main__":
-    # Créer les dossiers nécessaires
     os.makedirs("templates", exist_ok=True)
     os.makedirs("static", exist_ok=True)
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    ANALYSES_DIR.mkdir(parents=True, exist_ok=True)
     
     print("🚀 Lancement du serveur NeuroVision...")
     print("📊 Interface disponible sur: http://localhost:8000")

@@ -132,7 +132,7 @@ http://127.0.0.1:8000
 
 ## 👤 Auteur
 
-**Graddy Matangila**
+**Grady Matangila**
 Projet IA – Vision par ordinateur & Santé
 
 ---

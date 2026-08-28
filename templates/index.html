@@ -64,7 +64,8 @@
                 </div>
                 <div class="text-end">
                     <p class="mb-0"><strong>Date:</strong> <span id="report-date"></span></p>
-                    <p class="mb-0"><strong>ID Analyse:</strong> NV-<span id="report-id"></span></p>
+                    <p class="mb-0"><strong>Dossier patient:</strong> <span id="report-patient-id">Non renseigné</span></p>
+                    <p class="mb-0"><strong>Réf. analyse:</strong> <span id="report-id" class="report-ref">—</span></p>
                 </div>
             </div>
             <hr class="my-3">
@@ -79,19 +80,41 @@
                             <i class="fas fa-history me-2 text-primary"></i>Historique des Analyses
                         </h2>
                         
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                            <div class="d-flex align-items-center flex-wrap gap-2">
                                 <span class="badge bg-info" id="history-count">0 analyses</span>
+                                <div class="history-filters" id="history-filters" role="group" aria-label="Filtrer par type">
+                                    <button type="button" class="btn btn-sm btn-outline-primary active" data-filter="all" data-label="Toutes">Toutes</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-filter="glioma" data-label="Gliome">Gliome</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-filter="meningioma" data-label="Méningiome">Méningiome</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-filter="pituitary" data-label="Hypophysaire">Hypophysaire</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-filter="notumor" data-label="Aucune tumeur">Aucune tumeur</button>
+                                </div>
                             </div>
                             <button class="btn btn-sm btn-danger" id="clear-history-btn" style="display: none;">
                                 <i class="fas fa-trash me-2"></i>Vider l'historique
                             </button>
                         </div>
+
+                        <div class="history-search mb-3">
+                            <label class="form-label small mb-1" for="history-search-input">Rechercher par dossier ou référence</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="search" class="form-control" id="history-search-input"
+                                       placeholder="DOS-2026-0142 ou NV-91DD1802" maxlength="64" autocomplete="off">
+                                <button type="button" class="btn btn-outline-secondary" id="history-search-clear" title="Effacer la recherche">
+                                    Effacer
+                                </button>
+                            </div>
+                        </div>
                         
                         <div id="history-container">
                             <div class="alert alert-info text-center py-5">
                                 <i class="fas fa-inbox fa-3x mb-3 text-muted"></i>
-                                <p class="text-muted mb-0">Aucune analyse enregistrée pour le moment.</p>
+                                <p class="text-muted mb-3">Aucune analyse enregistrée pour le moment.</p>
+                                <button type="button" class="btn btn-primary btn-sm" data-history-go-analyse>
+                                    <i class="fas fa-microscope me-1"></i>Lancer une analyse
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -100,41 +123,169 @@
 
             <!-- À propos Section -->
             <div id="apropos-section" style="display: none;">
-                <div class="row">
-                    <div class="col-lg-8 mx-auto">
-                        <h2 class="mb-4">
-                            <i class="fas fa-info-circle me-2 text-primary"></i>À propos de NeuroVision
-                        </h2>
-                        
-                        <div class="card mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title"><i class="fas fa-brain me-2 text-primary"></i>Système d'Analyse IA</h5>
-                                <p class="card-text">NeuroVision est une application médicale utilisant l'intelligence artificielle pour l'analyse d'images IRM cérébrales.</p>
-                                <p class="mb-0"><strong>Version:</strong> 2.0.0</p>
+                <div class="about-page">
+                    <div class="about-hero result-card mb-4">
+                        <div class="d-flex flex-wrap align-items-center gap-4">
+                            <div class="about-logo">
+                                <i class="fas fa-brain"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <p class="about-kicker mb-1">Vision par ordinateur · Santé</p>
+                                <h1 class="about-title mb-2">NeuroVision</h1>
+                                <p class="lead text-muted mb-3">
+                                    Aide à la lecture d'IRM cérébrales : classification du type de lésion,
+                                    localisation par segmentation, puis interprétation en langage clair.
+                                </p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge about-badge">Version 2.0</span>
+                                    <span class="badge about-badge">FastAPI · TensorFlow</span>
+                                    <span class="badge about-badge">Usage éducatif</span>
+                                </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="card mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title"><i class="fas fa-cogs me-2 text-primary"></i>Fonctionnalités</h5>
-                                <ul class="mb-0">
-                                    <li><strong>Classification IA:</strong> Détecte le type de tumeur (Gliome, Méningiome, Hypophysaire)</li>
-                                    <li><strong>Segmentation:</strong> Localise et délimite la région affectée</li>
-                                    <li><strong>Historique:</strong> Conserve un historique complet de toutes les analyses</li>
-                                    <li><strong>Rapport Médical:</strong> Génère des rapports imprimables</li>
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-4">
+                            <div class="about-stat">
+                                <div class="about-stat-num">4</div>
+                                <div class="about-stat-label">Classes apprises<br>gliome, méningiome, hypophysaire, absence</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="about-stat">
+                                <div class="about-stat-num">2</div>
+                                <div class="about-stat-label">Modèles IA<br>classification et segmentation U-Net</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="about-stat">
+                                <div class="about-stat-num">1</div>
+                                <div class="about-stat-label">Rapport lisible<br>synthèse, confiance, cohérence, impression</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="result-card mb-4">
+                        <h3 class="section-title"><i class="fas fa-route me-2"></i>Comment ça fonctionne</h3>
+                        <div class="about-steps">
+                            <div class="about-step">
+                                <span class="about-step-num">1</span>
+                                <div>
+                                    <h5>Dépôt de l'image</h5>
+                                    <p>Vous chargez une coupe IRM (JPG, PNG, BMP). L'image est redimensionnée pour chaque modèle.</p>
+                                </div>
+                            </div>
+                            <div class="about-step">
+                                <span class="about-step-num">2</span>
+                                <div>
+                                    <h5>Classification</h5>
+                                    <p>Un réseau de neurones estime la classe la plus probable parmi quatre : gliome, méningiome, tumeur hypophysaire, ou aucune tumeur.</p>
+                                </div>
+                            </div>
+                            <div class="about-step">
+                                <span class="about-step-num">3</span>
+                                <div>
+                                    <h5>Segmentation</h5>
+                                    <p>Un second modèle dessine un masque (voile rouge) sur la zone qu'il juge anormale, avec une étendue estimée sur l'image.</p>
+                                </div>
+                            </div>
+                            <div class="about-step">
+                                <span class="about-step-num">4</span>
+                                <div>
+                                    <h5>Lecture assistée</h5>
+                                    <p>Le rapport croise les deux sorties : confiance, discordance éventuelle, ce que le type signifie, et comment lire les images.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="result-card mb-4">
+                        <h3 class="section-title"><i class="fas fa-layer-group me-2"></i>Les quatre lectures possibles</h3>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="about-class-card">
+                                    <h5>Gliome</h5>
+                                    <p class="mb-0">Tumeur primitive du tissu de soutien du cerveau, souvent intra-axiale. L'IA ne donne pas le grade.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="about-class-card">
+                                    <h5>Méningiome</h5>
+                                    <p class="mb-0">Lésion généralement extra-axiale, issue des méninges, souvent en périphérie. Nature et grade à confirmer.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="about-class-card">
+                                    <h5>Tumeur hypophysaire</h5>
+                                    <p class="mb-0">Région sellaire, à la base du cerveau. Ni les hormones ni la vision ne sont évaluées ici.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="about-class-card about-class-ok">
+                                    <h5>Aucune tumeur</h5>
+                                    <p class="mb-0">Aucune des trois classes tumorales n'est retenue. Cela n'exclut pas une autre pathologie ou un artefact.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="result-card mb-4">
+                        <h3 class="section-title"><i class="fas fa-toolbox me-2"></i>Ce que l'application permet</h3>
+                        <div class="row g-3">
+                            <div class="col-sm-6 col-lg-4">
+                                <div class="about-feature">
+                                    <i class="fas fa-history"></i>
+                                    <h6>Historique</h6>
+                                    <p>Chaque analyse est conservée avec images, référence courte (NV-…) et possibilité de la rouvrir.</p>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-4">
+                                <div class="about-feature">
+                                    <i class="fas fa-folder-open"></i>
+                                    <h6>Dossier patient</h6>
+                                    <p>Vous pouvez lier un ID de dossier (pas le nom) puis rechercher les cas dans l'historique.</p>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-lg-4">
+                                <div class="about-feature">
+                                    <i class="fas fa-print"></i>
+                                    <h6>Rapport imprimable</h6>
+                                    <p>Diagnostic, interprétation, images et limites de lecture tiennent sur une page à imprimer.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-4 mb-4">
+                        <div class="col-lg-7">
+                            <div class="result-card h-100">
+                                <h3 class="section-title"><i class="fas fa-microchip me-2"></i>Technique</h3>
+                                <ul class="about-tech mb-0">
+                                    <li><strong>Backend</strong> FastAPI (Python)</li>
+                                    <li><strong>IA</strong> TensorFlow / Keras — CNN de classification (224×224) et U-Net de segmentation (128×128)</li>
+                                    <li><strong>Images</strong> OpenCV, Pillow — masque superposé en rouge</li>
+                                    <li><strong>Interface</strong> HTML, CSS, JavaScript</li>
                                 </ul>
                             </div>
                         </div>
-
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2 text-warning"></i>Avertissement Médical</h5>
-                                <p class="card-text">
-                                    Ce système est un outil d'assistance au diagnostic et ne remplace pas l'avis d'un professionnel de santé qualifié. 
-                                    Les résultats doivent toujours être validés par un médecin.
-                                </p>
+                        <div class="col-lg-5">
+                            <div class="result-card h-100">
+                                <h3 class="section-title"><i class="fas fa-user me-2"></i>Auteur</h3>
+                                <p class="mb-1"><strong>Grady Matangila</strong></p>
+                                <p class="text-muted mb-0">Projet IA — vision par ordinateur et santé. Outil éducatif et expérimental, conçu pour apprendre à lire une sortie de modèle, pas pour poser un diagnostic.</p>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="about-disclaimer">
+                        <h5><i class="fas fa-exclamation-triangle me-2"></i>Ce n'est pas un diagnostic médical</h5>
+                        <p class="mb-2">NeuroVision assiste la lecture d'une image. Il ne remplace pas un radiologue, un neurologue ou un neurochirurgien.</p>
+                        <ul class="mb-0">
+                            <li>Les pourcentages portent sur la zone visible de l'image, pas sur le volume cérébral réel.</li>
+                            <li>Le grade, le volume, l'œdème et le retentissement clinique ne sont pas évalués.</li>
+                            <li>Toute décision de soin doit être prise par un professionnel de santé. En urgence, contactez un médecin.</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -152,11 +303,11 @@
                         </p>
                     </div>
                     
-                    <div class="upload-area" id="drop-zone" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-area" id="drop-zone">
                         <i class="fas fa-cloud-upload-alt fa-4x text-primary mb-3"></i>
                         <h3>Glissez votre IRM cérébrale ici</h3>
                         <p class="text-muted mb-4">ou cliquez pour sélectionner un fichier</p>
-                        <button class="btn btn-primary btn-lg px-4">
+                        <button type="button" class="btn btn-primary btn-lg px-4" id="choose-file-btn">
                             <i class="fas fa-file-upload me-2"></i>Choisir une image
                         </button>
                         <p class="small text-muted mt-3">Formats acceptés: JPG, PNG, BMP (Max 10MB)</p>
@@ -221,7 +372,7 @@
                                 <div class="col-md-8">
                                     <div class="d-flex align-items-center">
                                         <div class="me-4">
-                                            <div class="diagnosis-icon bg-primary">
+                                            <div class="diagnosis-icon bg-primary" id="diagnosis-icon">
                                                 <i class="fas fa-stethoscope"></i>
                                             </div>
                                         </div>
@@ -230,13 +381,14 @@
                                             <p class="text-muted mb-0" id="diagnosis-description">
                                                 Classification par réseau de neurones convolutifs
                                             </p>
+                                            <div class="mt-2" id="diagnosis-meta"></div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-4 text-md-end mt-3 mt-md-0">
                                     <div class="confidence-display">
                                         <span class="confidence-badge" id="pred-conf">0%</span>
-                                        <div class="small text-muted mt-1">Indice de confiance IA</div>
+                                        <div class="small text-muted mt-1" id="pred-conf-label">Indice de confiance IA</div>
                                     </div>
                                 </div>
                             </div>
@@ -252,12 +404,24 @@
                     </div>
                 </div>
 
+                <!-- Interpretation -->
+                <div class="row mb-4" id="interpretation-section">
+                    <div class="col-12">
+                        <div class="result-card">
+                            <h3 class="section-title">
+                                <i class="fas fa-book-medical me-2"></i>2. Interprétation des résultats
+                            </h3>
+                            <div id="interpretation-content"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Images Section -->
                 <div class="row">
                     <div class="col-md-6 mb-4">
                         <div class="result-card">
                             <h5 class="image-title">
-                                <i class="fas fa-image me-2"></i>Image Originale
+                                <i class="fas fa-image me-2"></i>3. Image originale
                             </h5>
                             <div class="image-container">
                                 <img id="img-original" class="result-image" 
@@ -266,14 +430,14 @@
                             </div>
                             <div class="image-info mt-3">
                                 <i class="fas fa-info-circle me-2 text-info"></i>
-                                <small>Image IRM cérébrale soumise pour analyse</small>
+                                <small id="original-image-caption">Image IRM cérébrale soumise pour analyse</small>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-6 mb-4">
                         <div class="result-card">
                             <h5 class="image-title text-danger">
-                                <i class="fas fa-bullseye me-2"></i>Segmentation de la Tumeur
+                                <i class="fas fa-bullseye me-2"></i>4. Carte de segmentation
                             </h5>
                             <div class="image-container">
                                 <img id="img-segmentation" class="result-image" 
@@ -286,13 +450,13 @@
                                     <div class="col-6">
                                         <div class="stat-card bg-danger bg-opacity-10 p-3 rounded">
                                             <h3 class="fw-bold text-danger mb-1" id="seg-percent">0%</h3>
-                                            <small class="text-muted">Surface Cérébrale Affectée</small>
+                                            <small class="text-muted">Part de l'image marquée</small>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="stat-card bg-dark bg-opacity-10 p-3 rounded">
-                                            <h3 class="fw-bold text-dark mb-1" id="seg-pixels">0</h3>
-                                            <small class="text-muted">Pixels Tumeur Détectés</small>
+                                            <h3 class="fw-bold text-dark mb-1" id="seg-extent">—</h3>
+                                            <small class="text-muted">Étendue sur l'image</small>
                                         </div>
                                     </div>
                                 </div>
@@ -305,25 +469,56 @@
                     </div>
                 </div>
 
+                <!-- Patient dossier -->
+                <div class="row mb-4 no-print" id="patient-link-section">
+                    <div class="col-12">
+                        <div class="result-card patient-link-card">
+                            <h5 class="mb-2">
+                                <i class="fas fa-folder-open me-2 text-primary"></i>Associer au dossier patient
+                            </h5>
+                            <p class="text-muted small mb-3">
+                                Optionnel. Renseignez l'identifiant du dossier avant d'imprimer ou de lancer une nouvelle analyse.
+                                N'indiquez pas le nom complet du patient, uniquement l'ID du dossier.
+                            </p>
+                            <div class="row g-2 align-items-center">
+                                <div class="col-md-7">
+                                    <label class="form-label small mb-1" for="patient-id-input">ID du dossier</label>
+                                    <input type="text" class="form-control" id="patient-id-input"
+                                           maxlength="64" placeholder="Ex. DOS-2026-0142" autocomplete="off">
+                                </div>
+                                <div class="col-md-5 d-flex align-items-end">
+                                    <button type="button" class="btn btn-primary w-100" id="save-patient-btn">
+                                        <i class="fas fa-save me-2"></i>Enregistrer le dossier
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="small mt-2" id="patient-save-feedback"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Action Buttons -->
                 <div class="text-center mb-5 no-print">
-                    <button class="btn btn-primary btn-lg me-3" onclick="window.print()">
+                    <button class="btn btn-outline-primary btn-lg me-3 mb-2" id="back-to-history-btn" style="display: none;">
+                        <i class="fas fa-arrow-left me-2"></i>Retour à l'historique
+                    </button>
+                    <button class="btn btn-primary btn-lg me-3 mb-2" id="print-report-btn">
                         <i class="fas fa-print me-2"></i>Imprimer le Rapport Médical
                     </button>
-                    <button class="btn btn-outline-secondary btn-lg me-3" onclick="location.reload()">
+                    <button class="btn btn-outline-secondary btn-lg me-3 mb-2" id="new-analysis-btn">
                         <i class="fas fa-redo me-2"></i>Nouvelle Analyse
                     </button>
                 </div>
 
                 <!-- Medical Notes -->
-                <div class="row mt-4 no-print">
+                <div class="row mt-4">
                     <div class="col-12">
                         <div class="alert alert-info">
-                            <h5><i class="fas fa-sticky-note me-2"></i>Notes Médicales:</h5>
-                            <ul class="mb-0">
-                                <li>Ce rapport est généré automatiquement par un système IA et doit être validé par un professionnel de santé.</li>
-                                <li>La précision du diagnostic dépend de la qualité de l'image IRM soumise.</li>
-                                <li>En cas d'urgence médicale, contactez immédiatement un médecin.</li>
+                            <h5><i class="fas fa-sticky-note me-2"></i>Limites de cette lecture</h5>
+                            <ul class="mb-0" id="report-limitations">
+                                <li>Ce rapport est généré automatiquement par un système IA. Il s'agit d'une aide à la lecture, pas d'un diagnostic médical.</li>
+                                <li>Les pourcentages décrivent la zone visible de l'image, pas le volume cérébral réel.</li>
+                                <li>Les résultats doivent être validés par un professionnel de santé. En cas d'urgence, contactez immédiatement un médecin.</li>
                             </ul>
                         </div>
                     </div>

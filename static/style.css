@@ -221,7 +221,7 @@ body {
 }
 
 .segmentation-stats h3 {
-    font-size: 2.2rem;
+    font-size: 1.6rem;
 }
 
 /* --- LOADER --- */
@@ -273,8 +273,8 @@ body {
     }
     
     .confidence-badge {
-        background: #666 !important;
         -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
     }
 }
 
@@ -316,6 +316,87 @@ body {
     animation: fadeIn 0.5s ease-out;
 }
 
+/* --- INTERPRETATION --- */
+.interp-synthesis {
+    border-radius: 12px;
+    padding: 18px 20px;
+    border-left: 5px solid var(--secondary-color);
+    background: #f0f7ff;
+}
+
+.interp-synthesis.interp-tumor {
+    background: #fdf2f2;
+    border-left-color: var(--accent-color);
+}
+
+.interp-synthesis.interp-ok {
+    background: #f0faf4;
+    border-left-color: var(--success-color);
+}
+
+.interp-synthesis.interp-warn {
+    background: #fff8eb;
+    border-left-color: var(--warning-color);
+}
+
+.interp-box {
+    height: 100%;
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.interp-box-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.interp-box-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+
+.interp-block h5 {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.interp-block ul {
+    padding-left: 1.2rem;
+}
+
+.report-header .text-end p {
+    white-space: nowrap;
+}
+
+.report-ref {
+    font-family: Consolas, "Courier New", monospace;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.patient-link-card .form-control:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.15);
+}
+
+@media print {
+    .interp-synthesis,
+    .interp-box {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
 /* --- BUTTONS --- */
 .btn-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -332,4 +413,221 @@ body {
 
 .btn-lg {
     border-radius: 12px;
+}
+
+.history-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.history-search {
+    max-width: 420px;
+}
+
+.history-search .form-control:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.15);
+}
+
+.history-card {
+    border: 1px solid #eef2f7;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+.history-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+.history-thumb-wrap {
+    background: #f8fafc;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.history-thumb {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+/* --- À PROPOS --- */
+.about-page {
+    max-width: 920px;
+    margin: 0 auto;
+    padding-bottom: 2rem;
+}
+
+.about-hero {
+    background: linear-gradient(135deg, #f8fbff 0%, #eef2f7 100%);
+}
+
+.about-logo {
+    width: 84px;
+    height: 84px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    color: #fff;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 10px 24px rgba(102, 126, 234, 0.35);
+    flex-shrink: 0;
+}
+
+.about-kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--secondary-color);
+}
+
+.about-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.about-badge {
+    background: #fff;
+    color: var(--primary-color);
+    border: 1px solid #e3e8ef;
+    font-weight: 500;
+    padding: 0.45rem 0.75rem;
+}
+
+.about-stat {
+    background: #fff;
+    border: 1px solid #eef2f7;
+    border-radius: 16px;
+    padding: 1.25rem 1.4rem;
+    height: 100%;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+}
+
+.about-stat-num {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+.about-stat-label {
+    font-size: 0.9rem;
+    color: #5f6b7a;
+    line-height: 1.4;
+}
+
+.about-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+}
+
+.about-step {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.about-step p {
+    margin-bottom: 0;
+    color: #5f6b7a;
+}
+
+.about-step h5 {
+    margin-bottom: 0.25rem;
+    color: var(--primary-color);
+}
+
+.about-step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--secondary-color);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.about-class-card {
+    height: 100%;
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    background: #fdf6f6;
+    border-left: 4px solid var(--accent-color);
+}
+
+.about-class-card h5 {
+    color: var(--primary-color);
+    margin-bottom: 0.4rem;
+}
+
+.about-class-card p {
+    color: #5f6b7a;
+    font-size: 0.95rem;
+}
+
+.about-class-ok {
+    background: #f0faf4;
+    border-left-color: var(--success-color);
+}
+
+.about-feature {
+    height: 100%;
+    padding: 0.25rem 0.15rem;
+}
+
+.about-feature i {
+    font-size: 1.4rem;
+    color: var(--secondary-color);
+    margin-bottom: 0.5rem;
+}
+
+.about-feature h6 {
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.about-feature p {
+    margin-bottom: 0;
+    color: #5f6b7a;
+    font-size: 0.92rem;
+}
+
+.about-tech {
+    padding-left: 1.1rem;
+}
+
+.about-tech li {
+    margin-bottom: 0.45rem;
+    color: #5f6b7a;
+}
+
+.about-disclaimer {
+    border-radius: 16px;
+    padding: 1.4rem 1.6rem;
+    background: #fff8eb;
+    border: 1px solid #f5e0b8;
+}
+
+.about-disclaimer h5 {
+    color: #9a6b12;
+    font-weight: 700;
+}
+
+.about-disclaimer p,
+.about-disclaimer li {
+    color: #6b5728;
 }
