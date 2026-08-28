@@ -1,12 +1,40 @@
 // Toggle Sidebar
 const wrapper = document.getElementById("wrapper");
 const menuToggle = document.getElementById("menu-toggle");
+const sidebarBackdrop = document.getElementById("sidebar-backdrop");
+
+function isMobileViewport() {
+    return window.innerWidth <= 768;
+}
+
+function syncSidebarState() {
+    if (!wrapper || !menuToggle) return;
+    const isVisible = isMobileViewport()
+        ? wrapper.classList.contains("toggled")
+        : !wrapper.classList.contains("toggled");
+    menuToggle.setAttribute("aria-expanded", String(isVisible));
+}
+
+function closeMobileSidebar() {
+    if (!wrapper || !isMobileViewport()) return;
+    wrapper.classList.remove("toggled");
+    syncSidebarState();
+}
 
 if (menuToggle) {
     menuToggle.onclick = function() {
+        if (!wrapper) return;
         wrapper.classList.toggle("toggled");
+        syncSidebarState();
     };
 }
+
+if (sidebarBackdrop) {
+    sidebarBackdrop.addEventListener("click", closeMobileSidebar);
+}
+
+window.addEventListener("resize", syncSidebarState);
+syncSidebarState();
 
 // Navigation entre les sections
 const navAnalyse = document.getElementById("nav-analyse");
@@ -31,6 +59,7 @@ if (navAnalyse) {
         e.preventDefault();
         showSection("analyse");
         updateNavigation("nav-analyse");
+        closeMobileSidebar();
     });
 }
 
@@ -40,6 +69,7 @@ if (navHistorique) {
         showSection("historique");
         updateNavigation("nav-historique");
         loadHistory();
+        closeMobileSidebar();
     });
 }
 
@@ -48,6 +78,7 @@ if (navApropos) {
         e.preventDefault();
         showSection("apropos");
         updateNavigation("nav-apropos");
+        closeMobileSidebar();
     });
 }
 
@@ -523,6 +554,7 @@ function setupDragAndDrop() {
     const openFilePicker = function(e) {
         e.preventDefault();
         e.stopPropagation();
+        fileInput.value = "";
         fileInput.click();
     };
 
@@ -555,9 +587,9 @@ function setupDragAndDrop() {
     });
 
     fileInput.addEventListener('change', function() {
-        if (this.files && this.files[0]) {
-            handleFileSelect(this.files[0]);
-        }
+        const file = this.files && this.files[0];
+        this.value = "";
+        if (file) handleFileSelect(file);
     });
 }
 
@@ -1112,6 +1144,10 @@ document.getElementById('download-report')?.addEventListener('click', function()
 
 // Gestion de la touche Escape pour réinitialiser
 document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && wrapper && isMobileViewport() && wrapper.classList.contains("toggled")) {
+        closeMobileSidebar();
+        return;
+    }
     if (e.key === 'Escape' && resultsArea && resultsArea.style.display === 'block') {
         if (viewingFromHistory) {
             showSection("historique");

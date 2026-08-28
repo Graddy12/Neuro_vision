@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NeuroVision AI - Analyse Médicale</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/style.css">
@@ -12,7 +13,7 @@
 
 <div class="d-flex" id="wrapper">
     <!-- Sidebar -->
-    <div class="bg-light" id="sidebar-wrapper">
+    <div class="bg-light" id="sidebar-wrapper" aria-label="Navigation principale">
         <div class="sidebar-heading">
             <i class="fas fa-brain me-2"></i>NeuroVision
             <div class="small text-muted mt-1">Analyse IA Médicale</div>
@@ -41,11 +42,14 @@
         </div>
     </div>
 
+    <button type="button" class="sidebar-backdrop" id="sidebar-backdrop" aria-label="Fermer le menu"></button>
+
     <!-- Page Content -->
     <div id="page-content-wrapper">
         <nav class="navbar navbar-light bg-transparent border-bottom mb-4 no-print">
             <div class="container-fluid">
-                <button class="btn btn-outline-secondary" id="menu-toggle">
+                <button type="button" class="btn btn-outline-secondary" id="menu-toggle"
+                        aria-controls="sidebar-wrapper" aria-expanded="true">
                     <i class="fas fa-bars"></i> Menu
                 </button>
                 <div class="navbar-text">
@@ -311,7 +315,8 @@
                             <i class="fas fa-file-upload me-2"></i>Choisir une image
                         </button>
                         <p class="small text-muted mt-3">Formats acceptés: JPG, PNG, BMP (Max 10MB)</p>
-                        <input type="file" id="fileInput" hidden accept="image/*">
+                        <input type="file" id="fileInput" hidden
+                               accept=".jpg,.jpeg,.png,.bmp,image/jpeg,image/png,image/bmp">
                     </div>
                     
                     <div class="row mt-5">

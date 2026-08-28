@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="NeuroVision">
+  <defs>
+    <linearGradient id="nv" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3498db"/>
+      <stop offset="1" stop-color="#764ba2"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="15" fill="url(#nv)"/>
+  <path d="M31 15c-7-5-16 1-14 9-6 3-5 13 1 15-2 8 7 14 13 9V15Zm2 0c7-5 16 1 14 9 6 3 5 13-1 15 2 8-7 14-13 9V15Z" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M24 26h7m-9 10h9m9-10h-7m9 10h-9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+</svg>
