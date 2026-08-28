@@ -344,9 +344,14 @@ def convert_to_python_types(obj):
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     """Sert la page HTML."""
+    no_cache_headers = {
+        "Cache-Control": "no-store, max-age=0",
+        "Pragma": "no-cache",
+        "Expires": "0",
+    }
     try:
         with open("templates/index.html", "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read())
+            return HTMLResponse(content=f.read(), headers=no_cache_headers)
     except FileNotFoundError:
         # Si le fichier n'existe pas, renvoyer une page simple
         return HTMLResponse(content="""
@@ -360,7 +365,7 @@ async def read_root():
             <p>Redirection vers l'interface...</p>
         </body>
         </html>
-        """)
+        """, headers=no_cache_headers)
 
 @app.get("/api/health")
 async def health_check():

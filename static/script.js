@@ -460,8 +460,31 @@ function setupHistoryListActions() {
     }
 }
 
+function refreshOutdatedInterface() {
+    const requiredIds = [
+        "pred-conf-label",
+        "diagnosis-meta",
+        "interpretation-content",
+        "original-image-caption",
+        "seg-extent",
+        "patient-id-input"
+    ];
+    if (requiredIds.every((id) => document.getElementById(id))) {
+        return false;
+    }
+
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("nv_ui") === "2") {
+        return false;
+    }
+    url.searchParams.set("nv_ui", "2");
+    window.location.replace(url.toString());
+    return true;
+}
+
 // Vérifier l'état du serveur au chargement
 document.addEventListener('DOMContentLoaded', function() {
+    if (refreshOutdatedInterface()) return;
     setupDragAndDrop();
     setupHistoryFilters();
     setupHistorySearch();
@@ -557,27 +580,33 @@ async function handleFileSelect(file) {
     // Préparer l'envoi
     const formData = new FormData();
     formData.append('file', file);
-    
+
+    let data;
     try {
         const response = await fetch('/api/predict', {
             method: 'POST',
             body: formData
         });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            displayResults(data, { fromHistory: false });
-            showSection("resultats");
-            updateNavigation("nav-analyse");
-        } else {
+
+        data = await response.json();
+        if (!response.ok || !data.success) {
             throw new Error(data.error || data.message || 'Erreur lors de l\'analyse');
         }
-        
     } catch (error) {
-        console.error('Erreur:', error);
+        console.error('Erreur lors de l\'analyse:', error);
         showSection("analyse");
         alert(`Erreur d'analyse: ${error.message}`);
+        return;
+    }
+
+    try {
+        displayResults(data, { fromHistory: false });
+        showSection("resultats");
+        updateNavigation("nav-analyse");
+    } catch (error) {
+        console.error('Analyse terminée, mais affichage impossible:', error);
+        showSection("analyse");
+        alert("L'analyse a été effectuée et enregistrée dans l'historique, mais son affichage a échoué. Rechargez la page, puis ouvrez-la depuis l'historique.");
     }
 }
 
