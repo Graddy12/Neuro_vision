@@ -59,7 +59,7 @@ TAILLE_SEGMENT = (128, 128) # Taille pour le U-Net (Segmentation)
 # Noms des fichiers modèles
 MODEL_CLF_PATH = "models/modele_tumeur_cerveau.h5"
 MODEL_SEG_PATH = "models/segmentation.h5"
-UI_VERSION = "2.2.1"
+UI_VERSION = "2.2.4"
 
 NOMS_CLASSES = ['glioma', 'meningioma', 'notumor', 'pituitary']
 

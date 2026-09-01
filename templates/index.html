@@ -416,67 +416,77 @@
                     </div>
                 </div>
 
+                <!-- Images : originale + segmentation -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="result-card">
+                            <h3 class="section-title">
+                                <i class="fas fa-images me-2"></i>2. Image originale et carte de segmentation
+                            </h3>
+                            <div class="row">
+                                <div class="col-md-6 mb-3 mb-md-0">
+                                    <h5 class="image-title">
+                                        <i class="fas fa-image me-2"></i>Image originale
+                                    </h5>
+                                    <div class="image-container image-container--zoom">
+                                        <img id="img-original" class="result-image" 
+                                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f8f9fa'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='16' fill='%236c757d' text-anchor='middle'%3EImage IRM%3C/text%3E%3C/svg%3E" 
+                                             alt="IRM Originale">
+                                        <small class="image-zoom-hint no-print">
+                                            <i class="fas fa-search-plus me-1"></i>Cliquer pour agrandir et zoomer
+                                        </small>
+                                    </div>
+                                    <div class="image-info mt-3">
+                                        <i class="fas fa-info-circle me-2 text-info"></i>
+                                        <small id="original-image-caption">Image IRM cérébrale soumise pour analyse</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="image-title text-danger">
+                                        <i class="fas fa-bullseye me-2"></i>Carte de segmentation
+                                    </h5>
+                                    <div class="image-container image-container--zoom">
+                                        <img id="img-segmentation" class="result-image" 
+                                             src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f8f9fa'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='16' fill='%236c757d' text-anchor='middle'%3ESegmentation%3C/text%3E%3C/svg%3E" 
+                                             alt="Segmentation">
+                                        <small class="image-zoom-hint no-print">
+                                            <i class="fas fa-search-plus me-1"></i>Cliquer pour agrandir et zoomer
+                                        </small>
+                                    </div>
+                                    <div class="segmentation-stats mt-3">
+                                        <div class="row text-center g-3">
+                                            <div class="col-6">
+                                                <div class="stat-card bg-danger bg-opacity-10 p-3 rounded">
+                                                    <h3 class="fw-bold text-danger mb-1" id="seg-percent">0%</h3>
+                                                    <small class="text-muted">Part de l'image marquée</small>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="stat-card bg-dark bg-opacity-10 p-3 rounded">
+                                                    <h3 class="fw-bold text-dark mb-1" id="seg-extent">—</h3>
+                                                    <small class="text-muted">Étendue sur l'image</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="alert alert-warning mt-3" role="alert" id="tumor-alert" style="display: none;">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            <span id="tumor-alert-text"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Interpretation -->
                 <div class="row mb-4" id="interpretation-section">
                     <div class="col-12">
                         <div class="result-card">
                             <h3 class="section-title">
-                                <i class="fas fa-book-medical me-2"></i>2. Interprétation des résultats
+                                <i class="fas fa-book-medical me-2"></i>3. Interprétation des résultats
                             </h3>
                             <div id="interpretation-content"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Images Section -->
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <div class="result-card">
-                            <h5 class="image-title">
-                                <i class="fas fa-image me-2"></i>3. Image originale
-                            </h5>
-                            <div class="image-container">
-                                <img id="img-original" class="result-image" 
-                                     src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f8f9fa'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='16' fill='%236c757d' text-anchor='middle'%3EImage IRM%3C/text%3E%3C/svg%3E" 
-                                     alt="IRM Originale">
-                            </div>
-                            <div class="image-info mt-3">
-                                <i class="fas fa-info-circle me-2 text-info"></i>
-                                <small id="original-image-caption">Image IRM cérébrale soumise pour analyse</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-4">
-                        <div class="result-card">
-                            <h5 class="image-title text-danger">
-                                <i class="fas fa-bullseye me-2"></i>4. Carte de segmentation
-                            </h5>
-                            <div class="image-container">
-                                <img id="img-segmentation" class="result-image" 
-                                     src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f8f9fa'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='16' fill='%236c757d' text-anchor='middle'%3ESegmentation%3C/text%3E%3C/svg%3E" 
-                                     alt="Segmentation">
-                            </div>
-                            
-                            <div class="segmentation-stats mt-3">
-                                <div class="row text-center g-3">
-                                    <div class="col-6">
-                                        <div class="stat-card bg-danger bg-opacity-10 p-3 rounded">
-                                            <h3 class="fw-bold text-danger mb-1" id="seg-percent">0%</h3>
-                                            <small class="text-muted">Part de l'image marquée</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-6">
-                                        <div class="stat-card bg-dark bg-opacity-10 p-3 rounded">
-                                            <h3 class="fw-bold text-dark mb-1" id="seg-extent">—</h3>
-                                            <small class="text-muted">Étendue sur l'image</small>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="alert alert-warning mt-3" role="alert" id="tumor-alert" style="display: none;">
-                                    <i class="fas fa-exclamation-triangle me-2"></i>
-                                    <span id="tumor-alert-text"></span>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -537,6 +547,34 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Lightbox zoom images -->
+<div id="image-lightbox" class="image-lightbox no-print" hidden aria-hidden="true">
+    <div class="image-lightbox-backdrop" data-lightbox-close></div>
+    <div class="image-lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="image-lightbox-title">
+        <div class="image-lightbox-header">
+            <h2 id="image-lightbox-title" class="image-lightbox-title">Image</h2>
+            <div class="image-lightbox-tools">
+                <button type="button" class="btn btn-sm btn-light" id="lightbox-zoom-out" title="Zoom arrière" aria-label="Zoom arrière">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-light" id="lightbox-zoom-reset" title="Réinitialiser" aria-label="Réinitialiser le zoom">
+                    100%
+                </button>
+                <button type="button" class="btn btn-sm btn-light" id="lightbox-zoom-in" title="Zoom avant" aria-label="Zoom avant">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-light" id="image-lightbox-close" title="Fermer" aria-label="Fermer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="image-lightbox-body" id="image-lightbox-body">
+            <img id="image-lightbox-img" alt="">
+        </div>
+        <p class="image-lightbox-footer">Molette ou boutons +/- pour zoomer · Glisser pour déplacer · Échap pour fermer</p>
     </div>
 </div>
 

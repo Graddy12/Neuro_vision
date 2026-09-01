@@ -218,6 +218,135 @@ body {
     background: white;
 }
 
+.result-image--zoomable {
+    cursor: zoom-in;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.result-image--zoomable:hover {
+    box-shadow: 0 4px 16px rgba(52, 152, 219, 0.25);
+}
+
+.image-container--zoom .image-zoom-hint {
+    display: none;
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.image-container--zoom .result-image--zoomable ~ .image-zoom-hint {
+    display: block;
+}
+
+/* --- Lightbox zoom --- */
+.image-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+}
+
+.image-lightbox[hidden] {
+    display: none !important;
+}
+
+.image-lightbox-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 12, 24, 0.94);
+    cursor: zoom-out;
+}
+
+.image-lightbox-panel {
+    position: relative;
+    z-index: 1;
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    background: #0f172a;
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.image-lightbox-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.98);
+    flex-shrink: 0;
+}
+
+.image-lightbox-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+
+.image-lightbox-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.image-lightbox-tools .btn-light {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #f8fafc;
+}
+
+.image-lightbox-tools .btn-light:hover {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+}
+
+.image-lightbox-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background: #020617;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.image-lightbox-body.is-dragging {
+    cursor: grabbing;
+}
+
+.image-lightbox-body img {
+    max-width: none;
+    max-height: none;
+    transform-origin: center center;
+    will-change: transform;
+    pointer-events: none;
+    image-rendering: auto;
+}
+
+.image-lightbox-footer {
+    margin: 0;
+    padding: 8px 14px;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    background: rgba(15, 23, 42, 0.98);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: center;
+    flex-shrink: 0;
+}
+
 .image-title {
     font-weight: 600;
     margin-bottom: 15px;
